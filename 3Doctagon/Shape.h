@@ -7,6 +7,6 @@ class Shape
 
 public:
 
-	std::vector<std::vector<Vector3>> GeneratePoints(uint8_t polygonSides, uint32_t polygonSize, uint32_t polygonHeight, Vector3& center, bool isPlane = false);
+	std::vector<std::vector<Vector3>> GeneratePoints(uint8_t polygonSides, float polygonSize, float polygonHeight, Vector3& center, bool isPlane = false);
 };
 

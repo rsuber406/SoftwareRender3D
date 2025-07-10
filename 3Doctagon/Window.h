@@ -3,8 +3,8 @@
 #include <vector>
 #include "Shape.h"
 #include "Camera.h"
-#define WIDTH 1920
-#define HEIGHT 1080
+#define WIDTH 500
+#define HEIGHT 500
 #define	TOTAL_PIXEL WIDTH * HEIGHT
 typedef std::vector<std::vector<Vector3>> StoredShape;
 
@@ -15,6 +15,7 @@ struct Actor
 	Vector3 position;
 	bool rotate = false;
 	float rotationModifier = 0.00f;
+	uint32_t color = 0xFFFFFFFF;
 };
 typedef std::vector<Vector3> Face;
 typedef std::vector<Actor> Scene;
@@ -37,11 +38,12 @@ private:
 	void UpdateActors();
 	void BuildScene();
 	void RenderOctagon();
+	void BuildWeekTwoLab();
 	void RenderShapes(Scene sceneToRender);
-	void DrawLines(Vector3& from, Vector3& to, Matrix4& worldMatrix);
+	void DrawLines(Vector3& from, Vector3& to, Matrix4& worldMatrix, uint32_t& color);
 	void TakeShape(Actor& actor);
-	void HandleFace(Face faceToDraw, Matrix4& worldMatrix);
-	void PointToPixel(Vector3& point, Matrix4& worldMatrix);
+	void HandleFace(Face faceToDraw, Matrix4& worldMatrix, uint32_t& color);
+	void PointToPixel(Vector3& point, Matrix4& worldMatrix, uint32_t& color);
 	Matrix4 CreateWorldMatrix(Vector3& desiredPosition);
 	unsigned int LerpBlend(unsigned int frontColor, unsigned int backColor);
 	unsigned int* pixels = nullptr;

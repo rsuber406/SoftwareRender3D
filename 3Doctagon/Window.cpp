@@ -1,8 +1,17 @@
 #include "Window.h"
 #include <cstdint>
 #include <chrono>
-#define RENDER_LAB 0// zero is my trial version of all of this
-#define FOV 45.0f
+#define RENDER_LAB 1// zero is my trial version of all of this
+#if RENDER_LAB == 0
+#define CAMERA_X_POS 0.00f
+#define CAMERA_Y_POS 70.0f
+#define CAMERA_Z_POS 5.0f
+#elif RENDER_LAB == 1
+#define CAMERA_X_POS 0.0f
+#define CAMERA_Y_POS 1.13f
+#define CAMERA_Z_POS 0.35f
+#endif
+#define FOV 90.0f
 #define NEAR_PLANE 0.1f
 #define FAR_PLANE 10.0f
 #define PI 3.14159f
@@ -10,7 +19,7 @@ Window::Window()
 {
 
 	keepAlive = RS_Initialize("Ryan Suber 3D Oct", WIDTH, HEIGHT);
-	Vector3 cameraPos(0, 70, 5);
+	Vector3 cameraPos(CAMERA_X_POS, CAMERA_Y_POS, CAMERA_Z_POS);
 	Vector3 targetPos(0, 0, 0);
 	Vector3 up(0, 0, 1);
 	int width = WIDTH;
@@ -36,12 +45,13 @@ void Window::UpdateLoop()
 	{
 		timeCheck = std::chrono::high_resolution_clock::now();
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(timeCheck - timeStamp);
-		if (elapsed > std::chrono::milliseconds(32)) {
+		if (elapsed > std::chrono::milliseconds(32))
+		{
 			ClearScreen();
 			UpdateActors();
-			RS_Update(pixels, TOTAL_PIXEL);
 			timeStamp = timeCheck;
 		}
+		RS_Update(pixels, TOTAL_PIXEL);
 	}
 }
 
@@ -78,7 +88,7 @@ void Window::UpdateActors()
 			Matrix4 moveToPosition = Matrix4::Translation(objectsToRender[i].position);
 
 			objectsToRender[i].worldMatrix = moveToPosition * rotation * moveToOrigin;
-			
+
 		}
 
 		TakeShape(objectsToRender[i]);
@@ -89,7 +99,7 @@ void Window::BuildScene()
 {
 	switch (RENDER_LAB) {
 	case 1:
-
+		BuildWeekTwoLab();
 		break;
 	case 2:
 
@@ -132,6 +142,31 @@ void Window::RenderOctagon()
 	RS_Update(pixels, TOTAL_PIXEL);
 }
 
+void Window::BuildWeekTwoLab()
+{
+	Vector3 planePos(0, 0, 0);
+	Vector3 cubePos(0, 0, 0);
+	Actor plane;
+	Shape createObjects;
+	plane.position = planePos;
+	plane.rotationModifier = 0.00f;
+	plane.vertices = createObjects.GeneratePoints(4, 1, 0, plane.position, true);
+	Actor cube;
+	cube.position = cubePos;
+	cube.rotationModifier = 0.001f;
+	cube.vertices = createObjects.GeneratePoints(4, 0.5f, 0.5f, cube.position);
+	cube.color = 0xFF00FF00;
+	objectsToRender.push_back(plane);
+	objectsToRender.push_back(cube);
+	Matrix4 moveToOrigin = Matrix4::Translation(objectsToRender[0].position * -1);
+	Matrix4 rotation = Matrix4::RotationZ(45.0f * PI / 180.0f);
+	Matrix4 moveToPosition = Matrix4::Translation(objectsToRender[0].position);
+
+	objectsToRender[0].worldMatrix = moveToPosition * rotation * moveToOrigin;
+	RenderShapes(objectsToRender);
+	RS_Update(pixels, TOTAL_PIXEL);
+}
+
 void Window::RenderShapes(Scene sceneToRender)
 {
 	for (int objectToDisplay = 0; objectToDisplay < sceneToRender.size(); objectToDisplay++) {
@@ -139,7 +174,7 @@ void Window::RenderShapes(Scene sceneToRender)
 	}
 }
 
-void Window::DrawLines(Vector3& from, Vector3& to, Matrix4& worldMatrix)
+void Window::DrawLines(Vector3& from, Vector3& to, Matrix4& worldMatrix, uint32_t& color)
 {
 	Vector2 screenBeginingPoint = camera->WorldToScreenPixel(from, worldMatrix);
 	Vector2 screenEndPosition = camera->WorldToScreenPixel(to, worldMatrix);
@@ -151,12 +186,12 @@ void Window::DrawLines(Vector3& from, Vector3& to, Matrix4& worldMatrix)
 		ratio += incrementRatio;
 		if (pointBetween == to || ratio >= 1) {
 
-			PointToPixel(pointBetween, worldMatrix);
+			PointToPixel(pointBetween, worldMatrix, color);
 
 			break;
 		}
 		else {
-			PointToPixel(pointBetween, worldMatrix);
+			PointToPixel(pointBetween, worldMatrix, color);
 		}
 	}
 
@@ -166,39 +201,39 @@ void Window::DrawLines(Vector3& from, Vector3& to, Matrix4& worldMatrix)
 void Window::TakeShape(Actor& actor)
 {
 	Face bottom = actor.vertices[0];
-	HandleFace(bottom, actor.worldMatrix);
+	HandleFace(bottom, actor.worldMatrix, actor.color);
 	if (actor.vertices.size() == 1) return;
 	Face top = actor.vertices[1];
-	HandleFace(top, actor.worldMatrix);
+	HandleFace(top, actor.worldMatrix, actor.color);
 	Face connected;
 	for (int i = 0; i < bottom.size(); i++) {
-		DrawLines(bottom[i], top[i], actor.worldMatrix);
+		DrawLines(bottom[i], top[i], actor.worldMatrix, actor.color);
 	}
 }
 
-void Window::HandleFace(Face faceToDraw, Matrix4& worldMatrix)
+void Window::HandleFace(Face faceToDraw, Matrix4& worldMatrix, uint32_t& color)
 {
 	for (int i = 0; i < faceToDraw.size() - 1; i++) {
 
-		DrawLines(faceToDraw[i], faceToDraw[i + 1], worldMatrix);
+		DrawLines(faceToDraw[i], faceToDraw[i + 1], worldMatrix, color);
 	}
-	DrawLines(faceToDraw[faceToDraw.size() - 1], faceToDraw[0], worldMatrix);
+	DrawLines(faceToDraw[faceToDraw.size() - 1], faceToDraw[0], worldMatrix, color);
 }
 
 
 
 
-void Window::PointToPixel(Vector3& point, Matrix4& worldMatrix)
+void Window::PointToPixel(Vector3& point, Matrix4& worldMatrix, uint32_t & color)
 {
 	// implement camera logic
 	Vector2 screenCoords = camera->WorldToScreenPixel(point, worldMatrix);
 	// implement 2d to 1d
-	uint32_t xCoord = screenCoords.GetX();
-	uint32_t yCoord = screenCoords.GetY();
+	uint32_t xCoord = floor(screenCoords.GetX() + 0.5f);
+	uint32_t yCoord = floor(screenCoords.GetY() + 0.5f);
 	uint32_t screenPixel = yCoord * WIDTH + xCoord;
 	if (xCoord >= 0 && xCoord < WIDTH && yCoord >= 0 && yCoord < HEIGHT) {
 		uint32_t screenPixel = yCoord * WIDTH + xCoord;
-		pixels[screenPixel] = 0xFFFFFF00;
+		pixels[screenPixel] = color;
 
 	}
 	else {
