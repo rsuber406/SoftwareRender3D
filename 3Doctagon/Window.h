@@ -3,9 +3,7 @@
 #include <vector>
 #include "Shape.h"
 #include "Camera.h"
-#define WIDTH 500
-#define HEIGHT 500
-#define	TOTAL_PIXEL WIDTH * HEIGHT
+
 typedef std::vector<std::vector<Vector3>> StoredShape;
 
 struct Actor 

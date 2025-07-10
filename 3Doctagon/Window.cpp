@@ -6,10 +6,16 @@
 #define CAMERA_X_POS 0.00f
 #define CAMERA_Y_POS 70.0f
 #define CAMERA_Z_POS 5.0f
+#define WIDTH 1920
+#define HEIGHT 1080
+#define	TOTAL_PIXEL WIDTH * HEIGHT
 #elif RENDER_LAB == 1
 #define CAMERA_X_POS 0.0f
 #define CAMERA_Y_POS 1.13f
 #define CAMERA_Z_POS 0.35f
+#define WIDTH 500
+#define HEIGHT 500
+#define	TOTAL_PIXEL WIDTH * HEIGHT
 #endif
 #define FOV 90.0f
 #define NEAR_PLANE 0.1f
