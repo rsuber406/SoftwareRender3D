@@ -12,6 +12,7 @@ struct Actor
 	Matrix4 worldMatrix;
 	Vector3 position;
 	bool rotate = false;
+	bool isPlane = false;
 	float rotationModifier = 0.00f;
 	uint32_t color = 0xFFFFFFFF;
 };
@@ -40,6 +41,7 @@ private:
 	void RenderShapes(Scene sceneToRender);
 	void DrawLines(Vector3& from, Vector3& to, Matrix4& worldMatrix, uint32_t& color);
 	void TakeShape(Actor& actor);
+	void DrawPlaneLines(Actor& actor);
 	void HandleFace(Face faceToDraw, Matrix4& worldMatrix, uint32_t& color);
 	void PointToPixel(Vector3& point, Matrix4& worldMatrix, uint32_t& color);
 	Matrix4 CreateWorldMatrix(Vector3& desiredPosition);

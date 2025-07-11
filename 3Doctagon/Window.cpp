@@ -11,8 +11,8 @@
 #define	TOTAL_PIXEL WIDTH * HEIGHT
 #elif RENDER_LAB == 1
 #define CAMERA_X_POS 0.0f
-#define CAMERA_Y_POS 1.13f
-#define CAMERA_Z_POS 0.35f
+#define CAMERA_Y_POS -0.8f
+#define CAMERA_Z_POS 0.25f
 #define WIDTH 500
 #define HEIGHT 500
 #define	TOTAL_PIXEL WIDTH * HEIGHT
@@ -151,16 +151,17 @@ void Window::RenderOctagon()
 void Window::BuildWeekTwoLab()
 {
 	Vector3 planePos(0, 0, 0);
-	Vector3 cubePos(0, 0, 0);
+	Vector3 cubePos(0, 0, 0.0f);
 	Actor plane;
 	Shape createObjects;
 	plane.position = planePos;
 	plane.rotationModifier = 0.00f;
-	plane.vertices = createObjects.GeneratePoints(4, 1, 0, plane.position, true);
+	plane.vertices = createObjects.GeneratePoints(4, 0.71f, 0, plane.position, true);
+	plane.isPlane = true;
 	Actor cube;
 	cube.position = cubePos;
 	cube.rotationModifier = 0.001f;
-	cube.vertices = createObjects.GeneratePoints(4, 0.5f, 0.5f, cube.position);
+	cube.vertices = createObjects.GeneratePoints(4, 0.25f, 0.5f, cube.position);
 	cube.color = 0xFF00FF00;
 	objectsToRender.push_back(plane);
 	objectsToRender.push_back(cube);
@@ -168,7 +169,7 @@ void Window::BuildWeekTwoLab()
 	Matrix4 rotation = Matrix4::RotationZ(45.0f * PI / 180.0f);
 	Matrix4 moveToPosition = Matrix4::Translation(objectsToRender[0].position);
 
-	objectsToRender[0].worldMatrix = moveToPosition * rotation * moveToOrigin;
+	//objectsToRender[0].worldMatrix = moveToPosition * rotation * moveToOrigin;
 	RenderShapes(objectsToRender);
 	RS_Update(pixels, TOTAL_PIXEL);
 }
@@ -208,12 +209,26 @@ void Window::TakeShape(Actor& actor)
 {
 	Face bottom = actor.vertices[0];
 	HandleFace(bottom, actor.worldMatrix, actor.color);
-	if (actor.vertices.size() == 1) return;
+	if (actor.isPlane) {
+	
+		DrawPlaneLines(actor);
+		return;
+	}
 	Face top = actor.vertices[1];
 	HandleFace(top, actor.worldMatrix, actor.color);
 	Face connected;
 	for (int i = 0; i < bottom.size(); i++) {
 		DrawLines(bottom[i], top[i], actor.worldMatrix, actor.color);
+	}
+}
+
+void Window::DrawPlaneLines(Actor& actor)
+{
+	Face planarLines = actor.vertices[1];
+	int oppositeVertexHopefully = -1;
+	for (int i = 0; i < planarLines.size(); i+=2) {
+	
+		DrawLines(planarLines[i], planarLines[i + 1], actor.worldMatrix, actor.color);
 	}
 }
 

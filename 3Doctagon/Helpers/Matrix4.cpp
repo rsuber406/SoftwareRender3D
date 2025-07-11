@@ -292,7 +292,7 @@ Matrix4 Matrix4::Perspective(float fov, float near, float far, float aspect)
 	return Matrix4(
 		Vector4(focalLength / aspect, 0, 0, 0),
 		Vector4(0, focalLength, 0, 0),
-		Vector4(0, 0, (far + near) * rangeInverse, 2 * far * near * rangeInverse),
+		Vector4(0, 0, -far * rangeInverse, far * near * rangeInverse),  // Signs flipped
 		Vector4(0, 0, -1, 0)
 	);
 }
@@ -318,7 +318,7 @@ Matrix4 Matrix4::LookAt(Vector3 eye, Vector3 target, Vector3 up)
 	return Matrix4(
 		Vector4(right.GetX(), right.GetY(), right.GetZ(), -Vector3::DotProduct(right, eye)),
 		Vector4(newUp.GetX(), newUp.GetY(), newUp.GetZ(), -Vector3::DotProduct(newUp, eye)),
-		Vector4(-forward.GetX(), -forward.GetY(), -forward.GetZ(), Vector3::DotProduct(forward, eye)),
+		Vector4(forward.GetX(), forward.GetY(), forward.GetZ(), -Vector3::DotProduct(forward, eye)), 
 		Vector4(0, 0, 0, 1)
 	);
 }

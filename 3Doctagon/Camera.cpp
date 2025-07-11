@@ -30,8 +30,8 @@ Vector2 Camera::WorldToScreenPixel(Vector3& worldPosition, Matrix4& worldMatrix)
 		projectedPosition.SetZ(projectedPosition.GetZ() / projectedPosition.GetW());
 	}
 
-	float screenX = (1 - projectedPosition.GetX()) * 0.5f * screenWidth;
-	float screenY = (1 - projectedPosition.GetY()) * 0.5f * screenHeight;
+	float screenX = (projectedPosition.GetX() + 1.0f) * 0.5f * screenWidth;
+	float screenY = (projectedPosition.GetY() + 1.0f) * 0.5f * screenHeight;
 	Vector2 screenPos(screenX, screenY);
 
 	return screenPos;
