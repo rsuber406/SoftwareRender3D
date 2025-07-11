@@ -5,10 +5,11 @@
 #include "Camera.h"
 
 typedef std::vector<std::vector<Vector3>> StoredShape;
-
+typedef std::vector<std::vector<Vector3>> Triangle;
 struct Actor 
 {
 	StoredShape vertices;
+	Triangle triangles;
 	Matrix4 worldMatrix;
 	Vector3 position;
 	bool rotate = false;
@@ -19,6 +20,13 @@ struct Actor
 typedef std::vector<Vector3> Face;
 typedef std::vector<Actor> Scene;
 
+enum ShapeSides {
+	Tri = 3,
+	Square,
+	Pentagon,
+	Hexagon,
+	Octagon
+};
 
 class Window
 {
@@ -38,6 +46,10 @@ private:
 	void BuildScene();
 	void RenderOctagon();
 	void BuildWeekTwoLab();
+	void BuildWeekTwoOptional();
+	void RasterScene();
+	void RasterObject(Actor& actor);
+	void DetermineTriangles(Actor& actor);
 	void RenderShapes(Scene sceneToRender);
 	void DrawLines(Vector3& from, Vector3& to, Matrix4& worldMatrix, uint32_t& color);
 	void TakeShape(Actor& actor);

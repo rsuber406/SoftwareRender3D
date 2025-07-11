@@ -23,7 +23,7 @@ void Shape::GenerateLines(std::vector<Vector3>& lineVector,  std::vector<Vector3
 std::vector<std::vector<Vector3>> Shape::GeneratePoints(uint8_t polygonSides, float polygonSize, float polygonHeight, Vector3& center, bool isPlane)
 {
 	Vector3 radius(polygonSize, 0, 0);
-
+	float degreeOffset = polygonSides > 3 ? 45.0f : 30.4f;
 	float angle = (2.0f * PI) / polygonSides;
 	std::vector<Vector3> bottomPoints(polygonSides);
 	Matrix3 offSetRot;
@@ -31,7 +31,7 @@ std::vector<std::vector<Vector3>> Shape::GeneratePoints(uint8_t polygonSides, fl
 	{
 		float angleStep = i * angle;
 		Matrix3 rotation = Matrix3::Rotation(angleStep);
-		Matrix3 rotationToNormal = Matrix3::Rotation((45.0f * PI / 180.0f));
+		Matrix3 rotationToNormal = Matrix3::Rotation((degreeOffset * PI / 180.0f));
 		//if (!isPlane)
 		{
 			Vector3 point = rotationToNormal * rotation * radius + center;

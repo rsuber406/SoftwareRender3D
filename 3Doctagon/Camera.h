@@ -8,7 +8,7 @@ public:
 	Camera(Vector3& position, Vector3& target, Vector3& up, float fov, float aspect, float nearPlane, float farPlane, 
 		uint32_t width, uint32_t height  );
 	Vector2 WorldToScreenPixel(Vector3& worldPosition, Matrix4& worldMatrix);
-
+	Vector3 GetPosition() { return position; }
 /// <summary>
 /// If camera controls are added, you must rebuild the view matrix and projection matrix
 /// 

@@ -1,7 +1,9 @@
 #include "Window.h"
 #include <cstdint>
 #include <chrono>
-#define RENDER_LAB 1// zero is my trial version of all of this
+#include <iostream>
+#include <algorithm>
+#define RENDER_LAB 2// zero is my trial version of all of this
 #if RENDER_LAB == 0
 #define CAMERA_X_POS 0.00f
 #define CAMERA_Y_POS 70.0f
@@ -13,6 +15,13 @@
 #define CAMERA_X_POS 0.0f
 #define CAMERA_Y_POS -0.8f
 #define CAMERA_Z_POS 0.25f
+#define WIDTH 500
+#define HEIGHT 500
+#define	TOTAL_PIXEL WIDTH * HEIGHT
+#elif RENDER_LAB == 2 // optional Assignment in week 2
+#define CAMERA_X_POS 0.0f
+#define CAMERA_Y_POS -2.0f
+#define CAMERA_Z_POS 2.0f
 #define WIDTH 500
 #define HEIGHT 500
 #define	TOTAL_PIXEL WIDTH * HEIGHT
@@ -55,8 +64,10 @@ void Window::UpdateLoop()
 		{
 			ClearScreen();
 			UpdateActors();
+			RasterScene();
 			timeStamp = timeCheck;
 		}
+
 		RS_Update(pixels, TOTAL_PIXEL);
 	}
 }
@@ -108,7 +119,7 @@ void Window::BuildScene()
 		BuildWeekTwoLab();
 		break;
 	case 2:
-
+		BuildWeekTwoOptional();
 		break;
 	default:
 		RenderOctagon();
@@ -172,7 +183,145 @@ void Window::BuildWeekTwoLab()
 	objectsToRender.push_back(cube);
 	objectsToRender.push_back(octagon);
 	RenderShapes(objectsToRender);
+
 	RS_Update(pixels, TOTAL_PIXEL);
+}
+
+void Window::BuildWeekTwoOptional()
+{
+	Actor triangle;
+	Shape generator;
+	triangle.position = Vector3(0, 0, 0);
+	triangle.vertices = generator.GeneratePoints(3, 1, 1, triangle.position);
+	DetermineTriangles(triangle);
+	objectsToRender.push_back(triangle);
+	RenderShapes(objectsToRender);
+	RasterObject(triangle);
+	RS_Update(pixels, TOTAL_PIXEL);
+}
+
+void Window::RasterScene()
+{
+	for (int i = 0; i < objectsToRender.size(); i++) {
+		RasterObject(objectsToRender[i]);
+	}
+}
+
+void Window::RasterObject(Actor& actor)
+{
+	float epsilon = 0.0001f;
+	for (int i = 0; i < actor.triangles.size(); i++) {
+		Vector3 a = actor.triangles[i][1];
+		Vector3 b = actor.triangles[i][0];
+		Vector3 c = actor.triangles[i][2];
+		Vector3 edge1 = b - a;
+		Vector3 edge2 = c - a;
+		Vector3 normalTriangle = Vector3::CrossProduct(edge2, edge1);
+		normalTriangle = normalTriangle.Normalize();
+		Vector3 triangleCenter = Vector3(a.GetX() + b.GetX() + c.GetX() / 3.0f, a.GetY() + b.GetY() + c.GetY() / 3.0f, a.GetZ() + b.GetZ() + c.GetZ() / 3.0f);
+		Vector3 viewDirection = camera->GetPosition() - triangleCenter;
+		viewDirection = viewDirection.Normalize();
+		float dotResult = Vector3::DotProduct(normalTriangle, viewDirection);
+		if (dotResult <= 0) continue;
+		float deltaY = std::max({ a.GetY(), b.GetY(), c.GetY() }) - std::min({ a.GetY(), b.GetY(), c.GetY() });
+		float deltaZ = std::max({ a.GetZ(), b.GetZ(), c.GetZ() }) - std::min({ a.GetZ(), b.GetZ(), c.GetZ() });
+		float minX = 0;
+		float maxX = 0;
+		float deltaMax = 0;
+		float deltaMin = 0;
+		minX = std::min(std::min(a.GetX(), b.GetX()), c.GetX());
+		maxX = std::max(std::max(a.GetX(), b.GetX()), c.GetX());
+		if (deltaZ > deltaY) {
+			deltaMin = std::min(std::min(a.GetZ(), b.GetZ()), c.GetZ());
+			deltaMax = std::max(std::max(a.GetZ(), b.GetZ()), c.GetZ());
+		}
+		else {
+			deltaMin = std::min(std::min(a.GetY(), b.GetY()), c.GetY());
+			deltaMax = std::max(std::max(a.GetY(), b.GetY()), c.GetY());
+		}
+
+
+		Vector3 basis0 = c - a;
+		Vector3 basis1 = b - a;
+		float basis00 = Vector3::DotProduct(basis0, basis0);
+		float basis01 = Vector3::DotProduct(basis0, basis1);
+		float basis11 = Vector3::DotProduct(basis1, basis1);
+		float inverse = 1.0f / ((basis00 * basis11) - (basis01 * basis01)); // Determinant, needed later
+		float stepSize = (maxX - minX) / WIDTH;
+		float stepSizeZ = (deltaMax - deltaMin) / HEIGHT;
+		Vector3 worldPoint;
+		for (float x = minX; x <= maxX; x += stepSize) {
+			for (float z = deltaMin; z <= deltaMax; z += stepSizeZ) {
+				worldPoint = deltaZ > deltaY ? Vector3(x, b.GetY(), z) : Vector3(x, z, b.GetZ());
+				Vector3 testPoint = worldPoint - a;
+				float testDot02 = Vector3::DotProduct(basis0, testPoint);
+				float testDot12 = Vector3::DotProduct(basis1, testPoint);
+				float u = (basis11 * testDot02 - basis01 * testDot12) * inverse;
+				float v = (basis00 * testDot12 - basis01 * testDot02) * inverse;
+				float w = 1 - u - v;
+
+				if (u >= epsilon && v >= epsilon && w >= epsilon ) // Point is in the bounds
+				{
+					uint8_t red = u * 0xFF;
+					uint8_t green = v * 0xFF;
+					uint8_t blue = w * 0xFF;
+					uint8_t alpha = 0xFF;
+					uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
+					Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, actor.worldMatrix);
+					int screenXPos = floor(screenPoint.GetX() + 0.5f);
+					int screenYPos = floor(screenPoint.GetY() + 0.5f);
+					if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
+
+						int pixelToChange = screenYPos * WIDTH + screenXPos;
+						pixels[pixelToChange] = color;
+
+					}
+				}
+			}
+		}
+	}
+}
+
+void Window::DetermineTriangles(Actor& actor)
+{
+	Face bottom = actor.vertices[0];
+	if (actor.vertices.size() < 2)
+	{
+		std::cout << "Missing top face from vertex build \n";
+		return;
+	}
+	Face top = actor.vertices[1];
+	for (int i = 0; i < bottom.size(); i++) // This will miss the last one to connect the shape
+	{
+		std::vector<Vector3> triangle;
+		int nextIndex = (i + 1) % bottom.size();
+		triangle.push_back(bottom[i]);
+		triangle.push_back(top[i]);
+		triangle.push_back(top[nextIndex]);
+		actor.triangles.push_back(triangle);
+	}
+
+
+	for (int i = 0; i < bottom.size(); i++) {
+		std::vector<Vector3> triangle;
+		int nextIndex = (i + 1) % bottom.size();
+		triangle.push_back(bottom[i]);
+		triangle.push_back(bottom[nextIndex]);
+		triangle.push_back(top[nextIndex]);
+		actor.triangles.push_back(triangle);
+	}
+
+
+	switch (bottom.size()) {
+	case ShapeSides::Tri:
+		actor.triangles.push_back(bottom);
+		actor.triangles.push_back(top);
+		break;
+
+	default:
+
+		break;
+	}
 }
 
 void Window::RenderShapes(Scene sceneToRender)
@@ -211,7 +360,7 @@ void Window::TakeShape(Actor& actor)
 	Face bottom = actor.vertices[0];
 	HandleFace(bottom, actor.worldMatrix, actor.color);
 	if (actor.isPlane) {
-	
+
 		DrawPlaneLines(actor);
 		return;
 	}
@@ -227,8 +376,8 @@ void Window::DrawPlaneLines(Actor& actor)
 {
 	Face planarLines = actor.vertices[1];
 	int oppositeVertexHopefully = -1;
-	for (int i = 0; i < planarLines.size(); i+=2) {
-	
+	for (int i = 0; i < planarLines.size(); i += 2) {
+
 		DrawLines(planarLines[i], planarLines[i + 1], actor.worldMatrix, actor.color);
 	}
 }
@@ -245,7 +394,7 @@ void Window::HandleFace(Face faceToDraw, Matrix4& worldMatrix, uint32_t& color)
 
 
 
-void Window::PointToPixel(Vector3& point, Matrix4& worldMatrix, uint32_t & color)
+void Window::PointToPixel(Vector3& point, Matrix4& worldMatrix, uint32_t& color)
 {
 	// implement camera logic
 	Vector2 screenCoords = camera->WorldToScreenPixel(point, worldMatrix);
