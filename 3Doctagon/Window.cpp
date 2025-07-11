@@ -24,7 +24,7 @@
 Window::Window()
 {
 
-	keepAlive = RS_Initialize("Ryan Suber 3D Oct", WIDTH, HEIGHT);
+	keepAlive = RS_Initialize("Ryan Suber Programming Assignment 2", WIDTH, HEIGHT);
 	Vector3 cameraPos(CAMERA_X_POS, CAMERA_Y_POS, CAMERA_Z_POS);
 	Vector3 targetPos(0, 0, 0);
 	Vector3 up(0, 0, 1);
@@ -163,13 +163,14 @@ void Window::BuildWeekTwoLab()
 	cube.rotationModifier = 0.001f;
 	cube.vertices = createObjects.GeneratePoints(4, 0.25f, 0.5f, cube.position);
 	cube.color = 0xFF00FF00;
+	Actor octagon;
+	octagon.position = Vector3(0, 0, -0.75f);
+	octagon.rotationModifier = 0.00f;
+	octagon.color = 0xFFFF0000;
+	octagon.vertices = createObjects.GeneratePoints(8, 0.25f, 0.5f, octagon.position);
 	objectsToRender.push_back(plane);
 	objectsToRender.push_back(cube);
-	Matrix4 moveToOrigin = Matrix4::Translation(objectsToRender[0].position * -1);
-	Matrix4 rotation = Matrix4::RotationZ(45.0f * PI / 180.0f);
-	Matrix4 moveToPosition = Matrix4::Translation(objectsToRender[0].position);
-
-	//objectsToRender[0].worldMatrix = moveToPosition * rotation * moveToOrigin;
+	objectsToRender.push_back(octagon);
 	RenderShapes(objectsToRender);
 	RS_Update(pixels, TOTAL_PIXEL);
 }
