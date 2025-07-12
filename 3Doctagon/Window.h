@@ -81,6 +81,7 @@ private:
 	unsigned int LerpBlend(unsigned int frontColor, unsigned int backColor);
 	unsigned int* pixels = nullptr;
 	bool keepAlive = false;
+	float* depthBuffer = nullptr;
 	uint64_t threadFlags;
 	Camera* camera = nullptr;
 	Scene objectsToRender;
