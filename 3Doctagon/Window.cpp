@@ -286,27 +286,27 @@ void Window::BuildWeekTwoOptional()
 
 void Window::RasterScene()
 {
-	//int threadCounter = 0;
-	//for (int i = 0; i < objectsToRender.size(); i++) {
-	//	for (int j = 0; j < objectsToRender[i].triangles.size(); j++) {
-	//		if (!keepAlive) return;
-	//		rasterThreads[threadCounter].triangle.push_back(objectsToRender[i].triangles[j]);
-	//		rasterThreads[threadCounter].worldMatrixRef.push_back(objectsToRender[i].worldMatrix);
-	//		threadFlags |= (1 << rasterThreads[threadCounter].threadId);
-	//		threadCounter++;
-	//		if (threadCounter >= MAX_NUMBER_RASTER_THREADS) threadCounter = 0;
-	//	}
-	//}
-	//// This will work when I can properly store each item into vectors 
-	//windowRasterCond.notify_all();
-	//{
-	//	std::unique_lock<std::mutex>lock(windowRasterMutex);
-	//	signalNextFrame.wait(lock, [&] {return threadFlags == 0 || threadFlags == UINT64_MAX; });
-	//}
-
+	int threadCounter = 0;
 	for (int i = 0; i < objectsToRender.size(); i++) {
-		RasterObject(objectsToRender[i]);
+		for (int j = 0; j < objectsToRender[i].triangles.size(); j++) {
+			if (!keepAlive) return;
+			rasterThreads[threadCounter].triangle.push_back(objectsToRender[i].triangles[j]);
+			rasterThreads[threadCounter].worldMatrixRef.push_back(objectsToRender[i].worldMatrix);
+			threadFlags |= (1 << rasterThreads[threadCounter].threadId);
+			threadCounter++;
+			if (threadCounter >= MAX_NUMBER_RASTER_THREADS) threadCounter = 0;
+		}
 	}
+	// This will work when I can properly store each item into vectors 
+	windowRasterCond.notify_all();
+	{
+		std::unique_lock<std::mutex>lock(windowRasterMutex);
+		signalNextFrame.wait(lock, [&] {return threadFlags == 0 || threadFlags == UINT64_MAX; });
+	}
+
+	//for (int i = 0; i < objectsToRender.size(); i++) {
+	//	RasterObject(objectsToRender[i]);
+	//}
 }
 
 void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldMatrix)
@@ -317,6 +317,7 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 		Vector3 a = triangle[i][1];
 		Vector3 b = triangle[i][0];
 		Vector3 c = triangle[i][2];
+		float deltaX = std::max({ a.GetX(), b.GetX(), c.GetX() }) - std::min({ a.GetX(), b.GetX(), c.GetX() });
 		float deltaY = std::max({ a.GetY(), b.GetY(), c.GetY() }) - std::min({ a.GetY(), b.GetY(), c.GetY() });
 		float deltaZ = std::max({ a.GetZ(), b.GetZ(), c.GetZ() }) - std::min({ a.GetZ(), b.GetZ(), c.GetZ() });
 		float minX = 0;
@@ -325,7 +326,11 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 		float deltaMin = 0;
 		minX = std::min(std::min(a.GetX(), b.GetX()), c.GetX());
 		maxX = std::max(std::max(a.GetX(), b.GetX()), c.GetX());
-		if (deltaZ > deltaY) {
+		float minY = std::min(std::min(a.GetY(), b.GetY()), c.GetY());
+		float maxY = std::max(std::max(a.GetY(), b.GetY()), c.GetY());
+		float minZ = std::min(std::min(a.GetZ(), b.GetZ()), c.GetZ());
+		float maxZ = std::max(std::max(a.GetZ(), b.GetZ()), c.GetZ());
+		if (deltaZ > deltaY && deltaX > epsilon) {
 			deltaMin = std::min(std::min(a.GetZ(), b.GetZ()), c.GetZ());
 			deltaMax = std::max(std::max(a.GetZ(), b.GetZ()), c.GetZ());
 		}
@@ -343,44 +348,86 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 		float inverse = 1.0f / ((basis00 * basis11) - (basis01 * basis01)); // Determinant, needed later
 		float stepSize = 0.001f;
 		float stepSizeZ = (deltaMax - deltaMin) / HEIGHT;
-
 		Vector3 worldPoint;
-		for (float x = minX; x <= maxX; x += stepSize) {
-			for (float z = deltaMin; z <= deltaMax; z += stepSizeZ) {
-				worldPoint = deltaZ > deltaY ? Vector3(x, b.GetY(), z) : Vector3(x, z, b.GetZ());
-				Vector3 testPoint = worldPoint - a;
-				float testDot02 = Vector3::DotProduct(basis0, testPoint);
-				float testDot12 = Vector3::DotProduct(basis1, testPoint);
-				float u = (basis11 * testDot02 - basis01 * testDot12) * inverse;
-				float v = (basis00 * testDot12 - basis01 * testDot02) * inverse;
-				float w = 1 - u - v;
+		if (deltaX > epsilon) {
 
-				if (u >= epsilon && v >= epsilon && w >= epsilon) // Point is in the bounds
-				{
-					uint8_t red = u * 0xFF;
-					uint8_t green = v * 0xFF;
-					uint8_t blue = w * 0xFF;
-					uint8_t alpha = 0xFF;
-					uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
-					Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, worldMatrix[i]);
-					int screenXPos = floor(screenPoint.GetX() + 0.5f);
-					int screenYPos = floor(screenPoint.GetY() + 0.5f);
-					if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
-						int pixelToChange = screenYPos * WIDTH + screenXPos;
-						if (pixelToChange > TOTAL_PIXEL) continue;
-						Vector4 transformedPoint = worldMatrix[i] * worldPoint;
+			for (float x = minX; x <= maxX; x += stepSize) {
+				for (float z = deltaMin; z <= deltaMax; z += stepSizeZ) {
+					worldPoint = deltaZ > deltaY ? Vector3(x, b.GetY(), z) : Vector3(x, z, b.GetZ());
+					Vector3 testPoint = worldPoint - a;
+					float testDot02 = Vector3::DotProduct(basis0, testPoint);
+					float testDot12 = Vector3::DotProduct(basis1, testPoint);
+					float u = (basis11 * testDot02 - basis01 * testDot12) * inverse;
+					float v = (basis00 * testDot12 - basis01 * testDot02) * inverse;
+					float w = 1 - u - v;
+
+					if (u >= epsilon && v >= epsilon && w >= epsilon) // Point is in the bounds
+					{
+						uint8_t red = u * 0xFF;
+						uint8_t green = v * 0xFF;
+						uint8_t blue = w * 0xFF;
+						uint8_t alpha = 0xFF;
+						uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
+						Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, worldMatrix[i]);
+						int screenXPos = floor(screenPoint.GetX() + 0.5f);
+						int screenYPos = floor(screenPoint.GetY() + 0.5f);
+						if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
+
+							int pixelToChange = screenYPos * WIDTH + screenXPos;
+							if (pixelToChange > TOTAL_PIXEL) continue;
+							Vector4 transformedPoint = worldMatrix[i] * worldPoint;
 
 
 
-						if (transformedPoint.GetY() < depthBuffer[pixelToChange]) {
-							depthBuffer[pixelToChange] = transformedPoint.GetY();
-							pixels[pixelToChange] = color;
+							if (transformedPoint.GetY() < depthBuffer[pixelToChange]) {
+								depthBuffer[pixelToChange] = transformedPoint.GetY();
+								pixels[pixelToChange] = color;
+							}
+
+
+
 						}
-						else {
-							//std::cout << "Y transformed: " << transformedPoint.GetY() << '\n';
+					}
+				}
+			}
+		}
+		else {
+			for (float y = minY; y <= maxY; y += stepSize) {
+				for (float z = minZ; z <= maxZ; z += stepSizeZ) {
+					worldPoint = Vector3(b.GetX(), y, z);
+					Vector3 testPoint = worldPoint - a;
+					float testDot02 = Vector3::DotProduct(basis0, testPoint);
+					float testDot12 = Vector3::DotProduct(basis1, testPoint);
+					float u = (basis11 * testDot02 - basis01 * testDot12) * inverse;
+					float v = (basis00 * testDot12 - basis01 * testDot02) * inverse;
+					float w = 1 - u - v;
+
+					if (u >= epsilon && v >= epsilon && w >= epsilon) // Point is in the bounds
+					{
+						uint8_t red = u * 0xFF;
+						uint8_t green = v * 0xFF;
+						uint8_t blue = w * 0xFF;
+						uint8_t alpha = 0xFF;
+						uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
+						Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, worldMatrix[i]);
+						int screenXPos = floor(screenPoint.GetX() + 0.5f);
+						int screenYPos = floor(screenPoint.GetY() + 0.5f);
+						if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
+
+							int pixelToChange = screenYPos * WIDTH + screenXPos;
+							if (pixelToChange > TOTAL_PIXEL) continue;
+							Vector4 transformedPoint = worldMatrix[i] * worldPoint;
+
+
+
+							if (transformedPoint.GetY() < depthBuffer[pixelToChange]) {
+								depthBuffer[pixelToChange] = transformedPoint.GetY();
+								pixels[pixelToChange] = color;
+							}
+
+
+
 						}
-
-
 					}
 				}
 			}
