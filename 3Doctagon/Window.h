@@ -30,10 +30,11 @@ struct ThreadData {
 	uint8_t threadId;
 	uint64_t* runThreadFlag = nullptr;
 	uint16_t* threadCount = nullptr;
-	Matrix4 worldMatrixRef;
+	std::vector<Matrix4> worldMatrixRef;
 	std::condition_variable* windowRasterCond = nullptr;
+	std::condition_variable* signalNextFrame = nullptr;
 	std::mutex* windowRasterMutex = nullptr;
-	std::vector<Vector3> triangle;
+	Triangle triangle;
 };
 
 enum ShapeSides {
@@ -67,7 +68,7 @@ private:
 	void BuildWeekTwoLab();
 	void BuildWeekTwoOptional();
 	void RasterScene();
-	void ThreadRasterObject(std::vector<Vector3> triangle, Matrix4 worldMatrix);
+	void ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldMatrix);
 	void RasterObject(Actor& actor);
 	void DetermineTriangles(Actor& actor);
 	void RenderShapes(Scene sceneToRender);
@@ -85,6 +86,7 @@ private:
 	Scene objectsToRender;
 	ThreadData* rasterThreads = nullptr;
 	std::condition_variable windowRasterCond;
+	std::condition_variable signalNextFrame;
 	std::mutex windowRasterMutex;
 	uint16_t threadCount = 0;
 };
