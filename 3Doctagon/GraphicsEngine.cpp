@@ -7,7 +7,7 @@
 #include <condition_variable>
 #include <mutex>
 
-struct ThreadData {
+struct MainThreadData {
     std::mutex* mainMutex = nullptr;
     std::condition_variable* mainCond = nullptr;
     bool* keepRunning = nullptr;
@@ -15,7 +15,7 @@ struct ThreadData {
 
 };
 
-void ThreadEntryPoint(ThreadData* threadData) 
+void ThreadEntryPoint(MainThreadData* threadData) 
 {
     threadData->window->UpdateLoop();
     *threadData->keepRunning = false;
@@ -29,7 +29,7 @@ int main()
     std::condition_variable mainCond;
     std::mutex mainMutex;
 
-    ThreadData threadInfo;
+    MainThreadData threadInfo;
     threadInfo.keepRunning = &keepRunning;
     threadInfo.mainCond = &mainCond;
     threadInfo.mainMutex = &mainMutex;

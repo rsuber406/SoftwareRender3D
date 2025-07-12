@@ -3,6 +3,7 @@
 #include <chrono>
 #include <iostream>
 #include <algorithm>
+#include <functional>
 #define RENDER_LAB 2// zero is my trial version of all of this
 #if RENDER_LAB == 0
 #define CAMERA_X_POS 0.00f
@@ -32,8 +33,8 @@
 #define PI 3.14159f
 Window::Window()
 {
-
 	keepAlive = RS_Initialize("Ryan Suber Programming Assignment 2", WIDTH, HEIGHT);
+	CreateRasterThreads();
 	Vector3 cameraPos(CAMERA_X_POS, CAMERA_Y_POS, CAMERA_Z_POS);
 	Vector3 targetPos(0, 0, 0);
 	Vector3 up(0, 0, 1);
@@ -62,6 +63,7 @@ void Window::UpdateLoop()
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(timeCheck - timeStamp);
 		if (elapsed > std::chrono::milliseconds(32))
 		{
+			if (!keepAlive) return;
 			ClearScreen();
 			UpdateActors();
 			RasterScene();
@@ -70,17 +72,26 @@ void Window::UpdateLoop()
 
 		RS_Update(pixels, TOTAL_PIXEL);
 	}
+	std::cout << "Update loop is exiting\n";
 }
 
 void Window::KillWindow()
 {
 	keepAlive = false;
+	threadFlags = UINT64_MAX;
+	windowRasterCond.notify_all();
+	{
+		std::unique_lock<std::mutex> lock(windowRasterMutex);
+		windowRasterCond.wait(lock, [&] {return threadCount == 0; });
+	}
 }
 
 Window::~Window()
 {
+	
 	if (pixels) delete[]pixels;
 	if (camera) delete camera;
+	if (rasterThreads) delete[] rasterThreads;
 	RS_Shutdown();
 }
 
@@ -88,6 +99,52 @@ void Window::ClearScreen()
 {
 	for (uint32_t i = 0; i < TOTAL_PIXEL; i++) {
 		pixels[i] = 0x00000000;
+	}
+}
+
+void Window::CreateRasterThreads()
+{
+	rasterThreads = new ThreadData[MAX_NUMBER_RASTER_THREADS];
+	for (int i = 0; i < MAX_NUMBER_RASTER_THREADS; i++) {
+		rasterThreads[i].keepAlive = &keepAlive;
+		rasterThreads[i].runThreadFlag = &threadFlags;
+		rasterThreads[i].windowRasterCond = &windowRasterCond;
+		rasterThreads[i].windowRasterMutex = &windowRasterMutex;
+		rasterThreads[i].threadCount = &threadCount;
+		rasterThreads[i].threadId = i;
+		auto bound = std::bind(&Window::ThreadEntryPoint, this ,&rasterThreads[i]);
+		std::thread(bound).detach();
+	}
+}
+
+void Window::ThreadEntryPoint(ThreadData* threadData)
+{
+	threadData->windowRasterMutex->lock();
+	(*threadData->threadCount)++;
+	threadData->windowRasterMutex->unlock();
+
+	RasterThreadLivingPoint(threadData);
+
+	threadData->windowRasterMutex->lock();
+	(*threadData->threadCount)--;
+	
+	threadData->windowRasterMutex->unlock();
+	threadData->windowRasterCond->notify_all();
+}
+
+void Window::RasterThreadLivingPoint(ThreadData* threadData)
+{
+	while (*threadData->keepAlive) {
+
+		{
+			std::unique_lock<std::mutex>lock(*threadData->windowRasterMutex);
+			threadData->windowRasterCond->wait(lock, [&] {return *threadData->runThreadFlag & (1 << threadData->threadId); });
+		}
+		if(!(*threadData->keepAlive) || (*threadData->runThreadFlag) & (1 << 63)) return;
+		if (!threadData->triangle.size()) continue;
+		ThreadRasterObject(threadData->triangle, threadData->worldMatrixRef);
+		*threadData->runThreadFlag &= ~(1 << threadData->threadId);
+		threadData->windowRasterCond->notify_all();
 	}
 }
 
@@ -193,6 +250,7 @@ void Window::BuildWeekTwoOptional()
 	Shape generator;
 	triangle.position = Vector3(0, 0, 0);
 	triangle.vertices = generator.GeneratePoints(3, 1, 1, triangle.position);
+	
 	DetermineTriangles(triangle);
 	objectsToRender.push_back(triangle);
 	RenderShapes(objectsToRender);
@@ -202,15 +260,103 @@ void Window::BuildWeekTwoOptional()
 
 void Window::RasterScene()
 {
+	int threadCounter = 0;
 	for (int i = 0; i < objectsToRender.size(); i++) {
-		RasterObject(objectsToRender[i]);
+		for (int j = 0; j < objectsToRender[i].triangles.size(); j++) {
+			if (!keepAlive) return;
+			rasterThreads[threadCounter].triangle = objectsToRender[i].triangles[j];
+			rasterThreads[threadCounter].worldMatrixRef = objectsToRender[i].worldMatrix;
+			threadFlags |= (1 << rasterThreads[threadCounter].threadId);
+			threadCounter++;
+			if (threadCounter >= MAX_NUMBER_RASTER_THREADS) threadCounter = 0;
+		}
+	}
+	windowRasterCond.notify_all();
+	{
+		std::unique_lock<std::mutex>lock(windowRasterMutex);
+		windowRasterCond.wait(lock, [&] {return !threadFlags || threadFlags == UINT64_MAX; });
+	}
+}
+
+void Window::ThreadRasterObject(std::vector<Vector3> triangle, Matrix4 worldMatrix)
+{
+
+	float epsilon = 0.0001f;
+	Vector3 a = triangle[1];
+	Vector3 b = triangle[0];
+	Vector3 c = triangle[2];
+	Vector3 edge1 = b - a;
+	Vector3 edge2 = c - a;
+	Vector3 normalTriangle = Vector3::CrossProduct(edge2, edge1);
+	normalTriangle = normalTriangle.Normalize();
+	Vector3 triangleCenter = Vector3(a.GetX() + b.GetX() + c.GetX() / 3.0f, a.GetY() + b.GetY() + c.GetY() / 3.0f, a.GetZ() + b.GetZ() + c.GetZ() / 3.0f);
+	Vector3 viewDirection = camera->GetPosition() - triangleCenter;
+	viewDirection = viewDirection.Normalize();
+	float dotResult = Vector3::DotProduct(normalTriangle, viewDirection);
+	if (dotResult <= 0) return;
+	float deltaY = std::max({ a.GetY(), b.GetY(), c.GetY() }) - std::min({ a.GetY(), b.GetY(), c.GetY() });
+	float deltaZ = std::max({ a.GetZ(), b.GetZ(), c.GetZ() }) - std::min({ a.GetZ(), b.GetZ(), c.GetZ() });
+	float minX = 0;
+	float maxX = 0;
+	float deltaMax = 0;
+	float deltaMin = 0;
+	minX = std::min(std::min(a.GetX(), b.GetX()), c.GetX());
+	maxX = std::max(std::max(a.GetX(), b.GetX()), c.GetX());
+	if (deltaZ > deltaY) {
+		deltaMin = std::min(std::min(a.GetZ(), b.GetZ()), c.GetZ());
+		deltaMax = std::max(std::max(a.GetZ(), b.GetZ()), c.GetZ());
+	}
+	else {
+		deltaMin = std::min(std::min(a.GetY(), b.GetY()), c.GetY());
+		deltaMax = std::max(std::max(a.GetY(), b.GetY()), c.GetY());
+	}
+
+
+	Vector3 basis0 = c - a;
+	Vector3 basis1 = b - a;
+	float basis00 = Vector3::DotProduct(basis0, basis0);
+	float basis01 = Vector3::DotProduct(basis0, basis1);
+	float basis11 = Vector3::DotProduct(basis1, basis1);
+	float inverse = 1.0f / ((basis00 * basis11) - (basis01 * basis01)); // Determinant, needed later
+	float stepSize = (maxX - minX) / WIDTH;
+	float stepSizeZ = (deltaMax - deltaMin) / HEIGHT;
+	Vector3 worldPoint;
+	for (float x = minX; x <= maxX; x += stepSize) {
+		for (float z = deltaMin; z <= deltaMax; z += stepSizeZ) {
+			worldPoint = deltaZ > deltaY ? Vector3(x, b.GetY(), z) : Vector3(x, z, b.GetZ());
+			Vector3 testPoint = worldPoint - a;
+			float testDot02 = Vector3::DotProduct(basis0, testPoint);
+			float testDot12 = Vector3::DotProduct(basis1, testPoint);
+			float u = (basis11 * testDot02 - basis01 * testDot12) * inverse;
+			float v = (basis00 * testDot12 - basis01 * testDot02) * inverse;
+			float w = 1 - u - v;
+
+			if (u >= epsilon && v >= epsilon && w >= epsilon) // Point is in the bounds
+			{
+				uint8_t red = u * 0xFF;
+				uint8_t green = v * 0xFF;
+				uint8_t blue = w * 0xFF;
+				uint8_t alpha = 0xFF;
+				uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
+				Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, worldMatrix);
+				int screenXPos = floor(screenPoint.GetX() + 0.5f);
+				int screenYPos = floor(screenPoint.GetY() + 0.5f);
+				if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
+
+					int pixelToChange = screenYPos * WIDTH + screenXPos;
+					pixels[pixelToChange] = color;
+
+				}
+			}
+		}
 	}
 }
 
 void Window::RasterObject(Actor& actor)
 {
 	float epsilon = 0.0001f;
-	for (int i = 0; i < actor.triangles.size(); i++) {
+	for (int i = 0; i < actor.triangles.size(); i++)
+	{
 		Vector3 a = actor.triangles[i][1];
 		Vector3 b = actor.triangles[i][0];
 		Vector3 c = actor.triangles[i][2];
@@ -260,7 +406,7 @@ void Window::RasterObject(Actor& actor)
 				float v = (basis00 * testDot12 - basis01 * testDot02) * inverse;
 				float w = 1 - u - v;
 
-				if (u >= epsilon && v >= epsilon && w >= epsilon ) // Point is in the bounds
+				if (u >= epsilon && v >= epsilon && w >= epsilon) // Point is in the bounds
 				{
 					uint8_t red = u * 0xFF;
 					uint8_t green = v * 0xFF;
