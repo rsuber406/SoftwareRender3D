@@ -4,7 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include <functional>
-#define RENDER_LAB 2// zero is my trial version of all of this
+#define RENDER_LAB 1// zero is my trial version of all of this
 #if RENDER_LAB == 0
 #define CAMERA_X_POS 0.00f
 #define CAMERA_Y_POS 70.0f
@@ -61,7 +61,7 @@ void Window::UpdateLoop()
 	{
 		timeCheck = std::chrono::high_resolution_clock::now();
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(timeCheck - timeStamp);
-		if (elapsed > std::chrono::milliseconds(32))
+		//if (elapsed > std::chrono::milliseconds(32))
 		{
 			if (!keepAlive) return;
 			ClearScreen();
@@ -310,7 +310,7 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 		Vector3 viewDirection = camera->GetPosition() - triangleCenter;
 		viewDirection = viewDirection.Normalize();
 		float dotResult = Vector3::DotProduct(normalTriangle, viewDirection);
-		if (dotResult <= epsilon) return;
+		//if (dotResult <= epsilon) return;
 		float deltaY = std::max({ a.GetY(), b.GetY(), c.GetY() }) - std::min({ a.GetY(), b.GetY(), c.GetY() });
 		float deltaZ = std::max({ a.GetZ(), b.GetZ(), c.GetZ() }) - std::min({ a.GetZ(), b.GetZ(), c.GetZ() });
 		float minX = 0;
@@ -335,7 +335,7 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 		float basis01 = Vector3::DotProduct(basis0, basis1);
 		float basis11 = Vector3::DotProduct(basis1, basis1);
 		float inverse = 1.0f / ((basis00 * basis11) - (basis01 * basis01)); // Determinant, needed later
-		float stepSize = (maxX - minX) / WIDTH;
+		float stepSize = 0.01f;
 		float stepSizeZ = (deltaMax - deltaMin) / HEIGHT;
 
 		Vector3 worldPoint;
