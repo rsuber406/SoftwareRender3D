@@ -5,6 +5,7 @@
 #include "Camera.h"
 #include <thread>
 #include <mutex>
+#include "Helpers/greendragon.h"
 #include <condition_variable>
 
 #define MAX_NUMBER_RASTER_THREADS 15

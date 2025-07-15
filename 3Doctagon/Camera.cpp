@@ -1,12 +1,12 @@
 #include "Camera.h"
-
+#define PI 3.14159f
 Camera::Camera(Vector3& position, Vector3& target, Vector3& up, float fov, float aspect, float nearPlane, float farPlane,
 	uint32_t width, uint32_t height)
 {
 	this->position = position;
 	this->target = target;
 	this->up = Vector3(0, 0, 1);
-	this->fov = fov;
+	this->fov = (fov * PI) / 180;
 	this->aspect = aspect;
 	this->nearPlane = nearPlane;
 	this->farPlane = farPlane;

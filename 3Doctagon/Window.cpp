@@ -4,7 +4,7 @@
 #include <iostream>
 #include <algorithm>
 #include <functional>
-#define RENDER_LAB 1// zero is my trial version of all of this
+#define RENDER_LAB 3// zero is my trial version of all of this
 #if RENDER_LAB == 0
 #define CAMERA_X_POS 0.00f
 #define CAMERA_Y_POS 70.0f
@@ -24,6 +24,13 @@
 #define CAMERA_Y_POS -3.0f
 #define CAMERA_Z_POS 3.0f
 #define WIDTH 500
+#define HEIGHT 500
+#define	TOTAL_PIXEL WIDTH * HEIGHT
+#elif RENDER_LAB == 3 // week 3 assignment
+#define CAMERA_X_POS 0.0f
+#define CAMERA_Y_POS -0.8f
+#define CAMERA_Z_POS 0.5f
+#define WIDTH 600
 #define HEIGHT 500
 #define	TOTAL_PIXEL WIDTH * HEIGHT
 #endif
@@ -63,7 +70,7 @@ void Window::UpdateLoop()
 	{
 		timeCheck = std::chrono::high_resolution_clock::now();
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(timeCheck - timeStamp);
-		//if (elapsed > std::chrono::milliseconds(32))
+		if (elapsed > std::chrono::milliseconds(32))
 		{
 			if (!keepAlive) return;
 			ClearScreen();
@@ -193,6 +200,9 @@ void Window::BuildScene()
 	case 2:
 		BuildWeekTwoOptional();
 		break;
+	case 3:
+		BuildWeekTwoLab();
+		break;
 	default:
 		RenderOctagon();
 		break;
@@ -243,7 +253,7 @@ void Window::BuildWeekTwoLab()
 	plane.isPlane = true;
 	Actor cube;
 	cube.position = cubePos;
-	cube.rotationModifier = 0.00000f;
+	cube.rotationModifier = 0.001f;
 	cube.vertices = createObjects.GeneratePoints(4, 0.25f, 0.5f, cube.position);
 	cube.color = 0xFF00FF00;
 	Actor octagon;
@@ -259,9 +269,9 @@ void Window::BuildWeekTwoLab()
 	DetermineTriangles(cube);
 	objectsToRender.push_back(plane);
 	objectsToRender.push_back(cube);
-	objectsToRender.push_back(octagon);
+	//objectsToRender.push_back(octagon);
 	RenderShapes(objectsToRender);
-	RasterObject(cube);
+	RasterScene();
 	RS_Update(pixels, TOTAL_PIXEL);
 }
 
@@ -304,9 +314,6 @@ void Window::RasterScene()
 		signalNextFrame.wait(lock, [&] {return threadFlags == 0 || threadFlags == UINT64_MAX; });
 	}
 
-	//for (int i = 0; i < objectsToRender.size(); i++) {
-	//	RasterObject(objectsToRender[i]);
-	//}
 }
 
 void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldMatrix)
@@ -354,6 +361,13 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 			for (float x = minX; x <= maxX; x += stepSize) {
 				for (float z = deltaMin; z <= deltaMax; z += stepSizeZ) {
 					worldPoint = deltaZ > deltaY ? Vector3(x, b.GetY(), z) : Vector3(x, z, b.GetZ());
+					Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, worldMatrix[i]);
+					int screenXPos = floor(screenPoint.GetX() + 0.5f);
+					int screenYPos = floor(screenPoint.GetY() + 0.5f);
+					int pixelToChange = screenYPos * WIDTH + screenXPos;
+					Vector4 transformedPoint = worldMatrix[i] * worldPoint;
+					if (transformedPoint.GetY() > depthBuffer[pixelToChange]) continue;
+
 					Vector3 testPoint = worldPoint - a;
 					float testDot02 = Vector3::DotProduct(basis0, testPoint);
 					float testDot12 = Vector3::DotProduct(basis1, testPoint);
@@ -363,19 +377,15 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 
 					if (u >= epsilon && v >= epsilon && w >= epsilon) // Point is in the bounds
 					{
+						// Upadte this code to paint a texture
 						uint8_t red = u * 0xFF;
 						uint8_t green = v * 0xFF;
 						uint8_t blue = w * 0xFF;
 						uint8_t alpha = 0xFF;
 						uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
-						Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, worldMatrix[i]);
-						int screenXPos = floor(screenPoint.GetX() + 0.5f);
-						int screenYPos = floor(screenPoint.GetY() + 0.5f);
 						if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
 
-							int pixelToChange = screenYPos * WIDTH + screenXPos;
 							if (pixelToChange > TOTAL_PIXEL) continue;
-							Vector4 transformedPoint = worldMatrix[i] * worldPoint;
 
 
 
@@ -395,6 +405,11 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 			for (float y = minY; y <= maxY; y += stepSize) {
 				for (float z = minZ; z <= maxZ; z += stepSizeZ) {
 					worldPoint = Vector3(b.GetX(), y, z);
+					Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, worldMatrix[i]);
+					int screenXPos = floor(screenPoint.GetX() + 0.5f);
+					int screenYPos = floor(screenPoint.GetY() + 0.5f);
+					int pixelToChange = screenYPos * WIDTH + screenXPos;
+				
 					Vector3 testPoint = worldPoint - a;
 					float testDot02 = Vector3::DotProduct(basis0, testPoint);
 					float testDot12 = Vector3::DotProduct(basis1, testPoint);
@@ -409,18 +424,15 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 						uint8_t blue = w * 0xFF;
 						uint8_t alpha = 0xFF;
 						uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
-						Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, worldMatrix[i]);
-						int screenXPos = floor(screenPoint.GetX() + 0.5f);
-						int screenYPos = floor(screenPoint.GetY() + 0.5f);
 						if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
 
-							int pixelToChange = screenYPos * WIDTH + screenXPos;
 							if (pixelToChange > TOTAL_PIXEL) continue;
 							Vector4 transformedPoint = worldMatrix[i] * worldPoint;
 
 
 
-							if (transformedPoint.GetY() < depthBuffer[pixelToChange]) {
+							if (transformedPoint.GetY() < depthBuffer[pixelToChange])
+							{
 								depthBuffer[pixelToChange] = transformedPoint.GetY();
 								pixels[pixelToChange] = color;
 							}
@@ -510,7 +522,7 @@ void Window::RasterObject(Actor& actor)
 								depthBuffer[pixelToChange] = transformedPoint.GetY();
 								pixels[pixelToChange] = color;
 							}
-							
+
 
 
 						}
@@ -551,7 +563,7 @@ void Window::RasterObject(Actor& actor)
 								depthBuffer[pixelToChange] = transformedPoint.GetY();
 								pixels[pixelToChange] = color;
 							}
-							
+
 
 
 						}
