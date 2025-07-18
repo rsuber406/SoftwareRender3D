@@ -190,8 +190,8 @@ void Window::UpdateActors()
 			
 		}
 
-		//TakeShape(objectsToRender[i]);
 	}
+		TakeShape(objectsToRender[0]);
 }
 
 void Window::BuildScene()
