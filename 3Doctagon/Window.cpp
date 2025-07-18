@@ -659,8 +659,8 @@ void Window::BetterRaster(Actor& actor)
 					
 					float zDepth = u * a.GetY() + v * b.GetY() + w * c.GetY();  // Y is my depth not Z
 
-					float finalU = 1 - (u * uvCoordA.GetX() + v * uvCoordB.GetX() + w * uvCoordC.GetX());  // Keep U the same
-					float finalV = 1 - (u * uvCoordA.GetY() + v * uvCoordB.GetY() + w * uvCoordC.GetY());
+					float finalU =  (u * uvCoordA.GetX() + v * uvCoordB.GetX() + w * uvCoordC.GetX());  // Keep U the same
+					float finalV =  (u * uvCoordA.GetY() + v * uvCoordB.GetY() + w * uvCoordC.GetY());
 					int uLocation = (int)((finalU)*greendragon_width);
 					int vLocation = (int)((finalV)*greendragon_height);
 					uLocation = std::max(0, std::min(uLocation, 511));
@@ -698,7 +698,7 @@ void Window::DetermineTriangles(Actor& actor)
 		actor.triangles.push_back(triangle);
 		if (i % 2 == 0) {
 
-			float uCoordA = 1.0; // works but inverted
+			float uCoordA = 1.0; // correct change otherside
 			float vCoordA = 1.0;
 			float uCoordB = 1.0;
 			float vCoordB = 0.0;
@@ -723,12 +723,12 @@ void Window::DetermineTriangles(Actor& actor)
 			//float vCoordB = 1.0;
 			//float uCoordC = 1.0;
 			//float vCoordC = 1.0;
-			float uCoordA = 0.0; // works but inverted
-			float vCoordA = 0.0;
-			float uCoordB = 0.0;
-			float vCoordB = 1.0;
-			float uCoordC = 1.0;
-			float vCoordC = 1.0;
+			float uCoordA = 1.0; //good no more adjustment
+			float vCoordA = 1.0;
+			float uCoordB = 1.0;
+			float vCoordB = 0.0;
+			float uCoordC = 0.0;
+			float vCoordC = 0.0;
 			Vector2 coordA(uCoordA, vCoordA);
 			Vector2 coordB(uCoordB, vCoordB);
 			Vector2 coordC(uCoordC, vCoordC);
@@ -741,15 +741,15 @@ void Window::DetermineTriangles(Actor& actor)
 		std::vector<Vector3> triangle;
 		int nextIndex = (i + 1) % bottom.size();
 		triangle.push_back(bottom[i]);
-		triangle.push_back(bottom[nextIndex]);
 		triangle.push_back(top[nextIndex]);
+		triangle.push_back(bottom[nextIndex]);
 		actor.triangles.push_back(triangle);
 		if (i % 2 == 0) {
-			float uCoordA = 0.0;
-			float vCoordA = 0.0;
+			float uCoordA = 1.0; 
+			float vCoordA = 1.0;
 			float uCoordB = 0.0;
-			float vCoordB = 1.0;
-			float uCoordC = 1.0;
+			float vCoordB = 0.0;
+			float uCoordC = 0.0;
 			float vCoordC = 1.0;
 			Vector2 coordA(uCoordA, vCoordA);
 			Vector2 coordB(uCoordB, vCoordB);
@@ -757,11 +757,12 @@ void Window::DetermineTriangles(Actor& actor)
 			actor.uvCoords.push_back(std::vector<Vector2>({ coordA, coordB, coordC }));
 		}
 		else {
-			float uCoordA = 0.0;
-			float vCoordA = 0.0;
-			float uCoordB = 1.0;
+
+			float uCoordA = 1.0; //good do not adjust anymore
+			float vCoordA = 1.0;
+			float uCoordB = 0.0;
 			float vCoordB = 0.0;
-			float uCoordC = 1.0;
+			float uCoordC = 0.0;
 			float vCoordC = 1.0;
 			Vector2 coordA(uCoordA, vCoordA);
 			Vector2 coordB(uCoordB, vCoordB);
