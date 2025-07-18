@@ -28,10 +28,10 @@
 #define	TOTAL_PIXEL WIDTH * HEIGHT
 #elif RENDER_LAB == 3 // week 3 assignment
 #define CAMERA_X_POS 0.0f
-#define CAMERA_Y_POS -0.8f
+#define CAMERA_Y_POS -1.0f
 #define CAMERA_Z_POS 0.5f
-#define WIDTH 600
-#define HEIGHT 500
+#define WIDTH 500
+#define HEIGHT 600
 #define	TOTAL_PIXEL WIDTH * HEIGHT
 #endif
 #define FOV 90.0f
@@ -41,7 +41,7 @@
 Window::Window()
 {
 	keepAlive = RS_Initialize("Ryan Suber Programming Assignment 2", WIDTH, HEIGHT);
-	CreateRasterThreads();
+	//CreateRasterThreads();
 	Vector3 cameraPos(CAMERA_X_POS, CAMERA_Y_POS, CAMERA_Z_POS);
 	Vector3 targetPos(0, 0, 0);
 	Vector3 up(0, 0, 1);
@@ -75,7 +75,8 @@ void Window::UpdateLoop()
 			if (!keepAlive) return;
 			ClearScreen();
 			UpdateActors();
-			RasterScene();
+			//RasterScene();
+			BetterRaster(objectsToRender[1]);
 			timeStamp = timeCheck;
 		}
 
@@ -160,7 +161,7 @@ void Window::RasterThreadLivingPoint(ThreadData* threadData)
 			return;
 		}
 
-		ThreadRasterObject(threadData->triangle, threadData->worldMatrixRef);
+		ThreadRasterObject(threadData->triangle, threadData->worldMatrixRef, threadData->triangleIdx);
 		threadData->triangle.clear();
 		threadData->worldMatrixRef.clear();
 		//threadData->windowRasterMutex->lock();
@@ -185,9 +186,11 @@ void Window::UpdateActors()
 
 			objectsToRender[i].worldMatrix = moveToPosition * rotation * moveToOrigin;
 
+			objectsToRender[i].triangles.clear();
+			DetermineTriangles(objectsToRender[i]);
 		}
 
-		TakeShape(objectsToRender[i]);
+		//TakeShape(objectsToRender[i]);
 	}
 }
 
@@ -253,8 +256,9 @@ void Window::BuildWeekTwoLab()
 	plane.isPlane = true;
 	Actor cube;
 	cube.position = cubePos;
-	cube.rotationModifier = 0.001f;
-	cube.vertices = createObjects.GeneratePoints(4, 0.25f, 0.5f, cube.position);
+	cube.rotationModifier = 0.01f;
+	//cube.vertices = createObjects.GeneratePoints(4, 0.25f, 0.5f, cube.position);
+	cube.vertices = createObjects.GenerateSquare();
 	cube.color = 0xFF00FF00;
 	Actor octagon;
 	octagon.position = Vector3(0, 0, -0.75f);
@@ -262,16 +266,17 @@ void Window::BuildWeekTwoLab()
 	octagon.color = 0xFFFF0000;
 	octagon.vertices = createObjects.GeneratePoints(8, 0.25f, 0.5f, octagon.position);
 	Matrix4 moveToOrigin = Matrix4::Translation(cube.position * -1);
-	Matrix4 rotation = Matrix4::RotationZ(45 * PI / 180.0f);
+	//Matrix4 rotation = Matrix4::RotationZ(45 * PI / 180.0f);
 	Matrix4 moveToPosition = Matrix4::Translation(cube.position);
 
-	cube.worldMatrix = moveToPosition * rotation * moveToOrigin;
+	//cube.worldMatrix = moveToPosition * rotation * moveToOrigin;
 	DetermineTriangles(cube);
 	objectsToRender.push_back(plane);
 	objectsToRender.push_back(cube);
 	//objectsToRender.push_back(octagon);
 	RenderShapes(objectsToRender);
-	RasterScene();
+	//RasterScene();
+	BetterRaster(cube);
 	RS_Update(pixels, TOTAL_PIXEL);
 }
 
@@ -297,29 +302,45 @@ void Window::BuildWeekTwoOptional()
 void Window::RasterScene()
 {
 	int threadCounter = 0;
+	//for (int i = 0; i < objectsToRender.size(); i++) {
+	//	for (int j = 0; j < objectsToRender[i].triangles.size(); j++) {
+	//		if (!keepAlive) return;
+	//		rasterThreads[threadCounter].triangle.push_back(objectsToRender[i].triangles[j]);
+	//		rasterThreads[threadCounter].worldMatrixRef.push_back(objectsToRender[i].worldMatrix);
+	//		rasterThreads[threadCounter].triangleIdx = threadCounter;
+	//		threadFlags |= (1 << rasterThreads[threadCounter].threadId);
+	//		threadCounter++;
+	//		if (threadCounter >= MAX_NUMBER_RASTER_THREADS) threadCounter = 0;
+	//	}
+	//}
+	//// This will work when I can properly store each item into vectors 
+	//windowRasterCond.notify_all();
+	//{
+	//	std::unique_lock<std::mutex>lock(windowRasterMutex);
+	//	signalNextFrame.wait(lock, [&] {return threadFlags == 0 || threadFlags == UINT64_MAX; });
+	//}
 	for (int i = 0; i < objectsToRender.size(); i++) {
-		for (int j = 0; j < objectsToRender[i].triangles.size(); j++) {
-			if (!keepAlive) return;
-			rasterThreads[threadCounter].triangle.push_back(objectsToRender[i].triangles[j]);
-			rasterThreads[threadCounter].worldMatrixRef.push_back(objectsToRender[i].worldMatrix);
-			threadFlags |= (1 << rasterThreads[threadCounter].threadId);
-			threadCounter++;
-			if (threadCounter >= MAX_NUMBER_RASTER_THREADS) threadCounter = 0;
-		}
+		RasterObject(objectsToRender[i]);
 	}
-	// This will work when I can properly store each item into vectors 
-	windowRasterCond.notify_all();
-	{
-		std::unique_lock<std::mutex>lock(windowRasterMutex);
-		signalNextFrame.wait(lock, [&] {return threadFlags == 0 || threadFlags == UINT64_MAX; });
-	}
-
 }
 
-void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldMatrix)
+void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldMatrix, int triangleNum)
 {
 
 	float epsilon = 0.0001f;
+
+	//float uCoordA = (triangleNum % 3) * 0.5;
+	//float vCoordA = (triangleNum % 3) * 0.5;
+	//float uCoordB = uCoordA + 0.5;
+	//float vCoordB = vCoordA;
+	//float uCoordC = uCoordA;
+	//float vCoordC = vCoordA + 0.5;
+	float uCoordA = 1.0;
+	float vCoordA = 1.0;
+	float uCoordB = 0.0;
+	float vCoordB = 1.0;
+	float uCoordC = 0.0;
+	float vCoordC = 0.0;
 	for (int i = 0; i < triangle.size(); i++) {
 		Vector3 a = triangle[i][1];
 		Vector3 b = triangle[i][0];
@@ -375,14 +396,18 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 					float v = (basis00 * testDot12 - basis01 * testDot02) * inverse;
 					float w = 1 - u - v;
 
-					if (u >= epsilon && v >= epsilon && w >= epsilon) // Point is in the bounds
+					if (u >= epsilon && v >= epsilon && w >= epsilon && u < 1 + epsilon && v < 1 + epsilon && w < 1 + epsilon) // Point is in the bounds
 					{
-						// Upadte this code to paint a texture
-						uint8_t red = u * 0xFF;
-						uint8_t green = v * 0xFF;
-						uint8_t blue = w * 0xFF;
-						uint8_t alpha = 0xFF;
-						uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
+
+						float finalU = u * uCoordA + v * uCoordB + w * uCoordC;
+						float finalV = u * vCoordA + v * vCoordB + w * vCoordC;
+						int uLocation = (int)((finalU)*greendragon_width);
+						int vLocation = (int)((finalV)*greendragon_height);
+						uLocation = std::max(0, std::min(uLocation, 511));
+						vLocation = std::max(0, std::min(vLocation, 511));
+						int textureIdx = vLocation * greendragon_width + uLocation;
+
+						uint32_t color = ConvertColorType(greendragon_pixels[textureIdx]);
 						if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
 
 							if (pixelToChange > TOTAL_PIXEL) continue;
@@ -406,10 +431,11 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 				for (float z = minZ; z <= maxZ; z += stepSizeZ) {
 					worldPoint = Vector3(b.GetX(), y, z);
 					Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, worldMatrix[i]);
+					Vector4 transformedPoint = worldMatrix[i] * worldPoint;
 					int screenXPos = floor(screenPoint.GetX() + 0.5f);
 					int screenYPos = floor(screenPoint.GetY() + 0.5f);
 					int pixelToChange = screenYPos * WIDTH + screenXPos;
-				
+
 					Vector3 testPoint = worldPoint - a;
 					float testDot02 = Vector3::DotProduct(basis0, testPoint);
 					float testDot12 = Vector3::DotProduct(basis1, testPoint);
@@ -419,20 +445,22 @@ void Window::ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldM
 
 					if (u >= epsilon && v >= epsilon && w >= epsilon) // Point is in the bounds
 					{
-						uint8_t red = u * 0xFF;
-						uint8_t green = v * 0xFF;
-						uint8_t blue = w * 0xFF;
-						uint8_t alpha = 0xFF;
-						uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
+						float finalU = u * uCoordA + v * uCoordB + w * uCoordC;
+						float finalV = u * vCoordA + v * vCoordB + w * vCoordC;
+						int uLocation = (int)((finalU)*greendragon_width);
+						int vLocation = (int)((finalV)*greendragon_height);
+						uLocation = std::max(0, std::min(uLocation, 511));
+						vLocation = std::max(0, std::min(vLocation, 511));
+						int textureIdx = uLocation * greendragon_width + vLocation;
+						//if (textureIdx > greendragon_height * greendragon_width) continue;
+						uint32_t color = ConvertColorType(greendragon_pixels[textureIdx]);
 						if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
 
 							if (pixelToChange > TOTAL_PIXEL) continue;
-							Vector4 transformedPoint = worldMatrix[i] * worldPoint;
 
 
 
-							if (transformedPoint.GetY() < depthBuffer[pixelToChange])
-							{
+							if (transformedPoint.GetY() < depthBuffer[pixelToChange]) {
 								depthBuffer[pixelToChange] = transformedPoint.GetY();
 								pixels[pixelToChange] = color;
 							}
@@ -453,6 +481,12 @@ void Window::RasterObject(Actor& actor)
 	float epsilon = 0.0001f;
 	for (int i = 0; i < actor.triangles.size(); i++)
 	{
+		float uCoordA = 1.0;
+		float vCoordA = 1.0;
+		float uCoordB = 0.0;
+		float vCoordB = 1.0;
+		float uCoordC = 0.0;
+		float vCoordC = 0.0;
 		Vector3 a = actor.triangles[i][1];
 		Vector3 b = actor.triangles[i][0];
 		Vector3 c = actor.triangles[i][2];
@@ -490,9 +524,17 @@ void Window::RasterObject(Actor& actor)
 		Vector3 worldPoint;
 		if (deltaX > epsilon) {
 
+
 			for (float x = minX; x <= maxX; x += stepSize) {
 				for (float z = deltaMin; z <= deltaMax; z += stepSizeZ) {
-					worldPoint = deltaZ > deltaY ? Vector3(x, b.GetY(), z) : Vector3(x, z, b.GetZ());
+					worldPoint = deltaZ > deltaY ? Vector3(x, b.GetY(), z) : Vector3(x, z, b.GetZ()); // will only be one dependant on face
+					Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, actor.worldMatrix);
+					int screenXPos = floor(screenPoint.GetX() + 0.5f);
+					int screenYPos = floor(screenPoint.GetY() + 0.5f);
+					int pixelToChange = screenYPos * WIDTH + screenXPos;
+					Vector4 transformedPoint = actor.worldMatrix * worldPoint;
+					if (transformedPoint.GetY() > depthBuffer[pixelToChange]) continue;
+
 					Vector3 testPoint = worldPoint - a;
 					float testDot02 = Vector3::DotProduct(basis0, testPoint);
 					float testDot12 = Vector3::DotProduct(basis1, testPoint);
@@ -500,21 +542,21 @@ void Window::RasterObject(Actor& actor)
 					float v = (basis00 * testDot12 - basis01 * testDot02) * inverse;
 					float w = 1 - u - v;
 
-					if (u >= epsilon && v >= epsilon && w >= epsilon) // Point is in the bounds
+					if (u >= epsilon && v >= epsilon && w >= epsilon && u < 1 + epsilon && v < 1 + epsilon && w < 1 + epsilon) // Point is in the bounds
 					{
-						uint8_t red = u * 0xFF;
-						uint8_t green = v * 0xFF;
-						uint8_t blue = w * 0xFF;
-						uint8_t alpha = 0xFF;
-						uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
-						Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, actor.worldMatrix);
-						int screenXPos = floor(screenPoint.GetX() + 0.5f);
-						int screenYPos = floor(screenPoint.GetY() + 0.5f);
+
+						float finalU = w * uCoordA + v * uCoordB + u * uCoordC;
+						float finalV = w * vCoordA + v * vCoordB + u * vCoordC;
+						int uLocation = (int)((finalU)*greendragon_width);
+						int vLocation = (int)((finalV)*greendragon_height);
+						uLocation = std::max(0, std::min(uLocation, 511));
+						vLocation = std::max(0, std::min(vLocation, 511));
+						int textureIdx = vLocation * greendragon_width + uLocation;
+
+						uint32_t color = ConvertColorType(greendragon_pixels[textureIdx]);
 						if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
 
-							int pixelToChange = screenYPos * WIDTH + screenXPos;
 							if (pixelToChange > TOTAL_PIXEL) continue;
-							Vector4 transformedPoint = actor.worldMatrix * worldPoint;
 
 
 
@@ -531,9 +573,16 @@ void Window::RasterObject(Actor& actor)
 			}
 		}
 		else {
+
 			for (float y = minY; y <= maxY; y += stepSize) {
 				for (float z = minZ; z <= maxZ; z += stepSizeZ) {
 					worldPoint = Vector3(b.GetX(), y, z);
+					Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, actor.worldMatrix);
+					Vector4 transformedPoint = actor.worldMatrix * worldPoint;
+					int screenXPos = floor(screenPoint.GetX() + 0.5f);
+					int screenYPos = floor(screenPoint.GetY() + 0.5f);
+					int pixelToChange = screenYPos * WIDTH + screenXPos;
+
 					Vector3 testPoint = worldPoint - a;
 					float testDot02 = Vector3::DotProduct(basis0, testPoint);
 					float testDot12 = Vector3::DotProduct(basis1, testPoint);
@@ -543,19 +592,18 @@ void Window::RasterObject(Actor& actor)
 
 					if (u >= epsilon && v >= epsilon && w >= epsilon) // Point is in the bounds
 					{
-						uint8_t red = u * 0xFF;
-						uint8_t green = v * 0xFF;
-						uint8_t blue = w * 0xFF;
-						uint8_t alpha = 0xFF;
-						uint32_t color = (alpha << 24) | (red << 16) | (green << 8) | blue;
-						Vector2 screenPoint = camera->WorldToScreenPixel(worldPoint, actor.worldMatrix);
-						int screenXPos = floor(screenPoint.GetX() + 0.5f);
-						int screenYPos = floor(screenPoint.GetY() + 0.5f);
+						float finalU = w * uCoordA + v * uCoordB + u * uCoordC;
+						float finalV = w * vCoordA + v * vCoordB + u * vCoordC;
+						int uLocation = (int)((finalU)*greendragon_width);
+						int vLocation = (int)((finalV)*greendragon_height);
+						uLocation = std::max(0, std::min(uLocation, 511));
+						vLocation = std::max(0, std::min(vLocation, 511));
+						int textureIdx = vLocation * greendragon_width + uLocation;
+						if (textureIdx > greendragon_height * greendragon_width) continue;
+						uint32_t color = ConvertColorType(greendragon_pixels[textureIdx]);
 						if (screenXPos >= 0 && screenXPos < WIDTH && screenYPos >= 0 && screenYPos < HEIGHT) {
 
-							int pixelToChange = screenYPos * WIDTH + screenXPos;
 							if (pixelToChange > TOTAL_PIXEL) continue;
-							Vector4 transformedPoint = actor.worldMatrix * worldPoint;
 
 
 
@@ -568,6 +616,63 @@ void Window::RasterObject(Actor& actor)
 
 						}
 					}
+				}
+			}
+		}
+	}
+}
+
+void Window::BetterRaster(Actor& actor)
+{
+
+	for (int i = 0; i < actor.triangles.size(); i++) {
+		Vector3 a = actor.triangles[i][1];
+		Vector3 b = actor.triangles[i][0];
+		Vector3 c = actor.triangles[i][2];
+		Vector2 uvCoordA = actor.uvCoords[i][1];
+		
+		Vector2 uvCoordB = actor.uvCoords[i][0];
+		
+		Vector2 uvCoordC = actor.uvCoords[i][2];
+		
+		Vector2 screenPointA = camera->WorldToScreenPixel(a, actor.worldMatrix);
+		Vector2 screenPointB = camera->WorldToScreenPixel(b, actor.worldMatrix);
+		Vector2 screenPointC = camera->WorldToScreenPixel(c, actor.worldMatrix);
+		int minX = (int)std::min(screenPointA.GetX(), std::min(screenPointB.GetX(), screenPointC.GetX()));
+		int maxX = (int)std::max(screenPointA.GetX(), std::max(screenPointB.GetX(), screenPointC.GetX()));
+		int minY = (int)std::min(screenPointA.GetY(), std::min(screenPointB.GetY(), screenPointC.GetY()));
+		int maxY = (int)std::max(screenPointA.GetY(), std::max(screenPointB.GetY(), screenPointC.GetY()));
+
+		for (int y = minY; y <= maxY; y++) {
+			for (int x = minX; x <= maxX; x++) {
+
+				float edge0 = (screenPointB.GetX() - screenPointA.GetX()) * (y - screenPointA.GetY()) - (screenPointB.GetY() - screenPointA.GetY()) * (x - screenPointA.GetX());
+				float edge1 = (screenPointC.GetX() - screenPointB.GetX()) * (y - screenPointB.GetY()) - (screenPointC.GetY() - screenPointB.GetY()) * (x - screenPointB.GetX());
+				float edge2 = (screenPointA.GetX() - screenPointC.GetX()) * (y - screenPointC.GetY()) - (screenPointA.GetY() - screenPointC.GetY()) * (x - screenPointC.GetX());
+				if ((edge0 >= 0 && edge1 >= 0 && edge2 >= 0) || (edge0 <= 0 && edge1 <= 0 && edge2 <= 0)) {
+					
+					float area = edge0 + edge1 + edge2;
+					float u = edge1 / area;
+					float v = edge2 / area;
+					float w = edge0 / area;
+
+					
+					float zDepth = u * a.GetY() + v * b.GetY() + w * c.GetY();  // Y is my depth not Z
+
+					float finalU = 1 - (u * uvCoordA.GetX() + v * uvCoordB.GetX() + w * uvCoordC.GetX());  // Keep U the same
+					float finalV = 1 - (u * uvCoordA.GetY() + v * uvCoordB.GetY() + w * uvCoordC.GetY());
+					int uLocation = (int)((finalU)*greendragon_width);
+					int vLocation = (int)((finalV)*greendragon_height);
+					uLocation = std::max(0, std::min(uLocation, 511));
+					vLocation = std::max(0, std::min(vLocation, 511));
+					int textureLocation = vLocation * greendragon_width + uLocation;
+					int pixelLocation = y * WIDTH + x;
+					if (pixelLocation > TOTAL_PIXEL) continue;
+					if (zDepth < depthBuffer[pixelLocation]) {
+						depthBuffer[pixelLocation] = zDepth;
+						pixels[pixelLocation] = ConvertColorType(greendragon_pixels[textureLocation]);
+					}
+					
 				}
 			}
 		}
@@ -591,6 +696,44 @@ void Window::DetermineTriangles(Actor& actor)
 		triangle.push_back(top[i]);
 		triangle.push_back(top[nextIndex]);
 		actor.triangles.push_back(triangle);
+		if (i % 2 == 0) {
+
+			float uCoordA = 1.0; // works but inverted
+			float vCoordA = 1.0;
+			float uCoordB = 1.0;
+			float vCoordB = 0.0;
+			float uCoordC = 0.0;
+			float vCoordC = 0.0;
+			//float uCoordA = 1.0; // works but inverted
+			//float vCoordA = 1.0;
+			//float uCoordB = 1.0;
+			//float vCoordB = 0.0;
+			//float uCoordC = 0.0;
+			//float vCoordC = 0.0;
+			Vector2 coordA(uCoordA, vCoordA);
+			Vector2 coordB(uCoordB, vCoordB);
+			Vector2 coordC(uCoordC, vCoordC);
+			actor.uvCoords.push_back(std::vector<Vector2>({ coordA, coordB, coordC }));
+		}
+		else {
+
+			//float uCoordA = 0.0; // works but inverted
+			//float vCoordA = 0.0;
+			//float uCoordB = 0.0;
+			//float vCoordB = 1.0;
+			//float uCoordC = 1.0;
+			//float vCoordC = 1.0;
+			float uCoordA = 0.0; // works but inverted
+			float vCoordA = 0.0;
+			float uCoordB = 0.0;
+			float vCoordB = 1.0;
+			float uCoordC = 1.0;
+			float vCoordC = 1.0;
+			Vector2 coordA(uCoordA, vCoordA);
+			Vector2 coordB(uCoordB, vCoordB);
+			Vector2 coordC(uCoordC, vCoordC);
+			actor.uvCoords.push_back(std::vector<Vector2>({ coordA, coordB, coordC }));
+		}
 	}
 
 
@@ -601,6 +744,30 @@ void Window::DetermineTriangles(Actor& actor)
 		triangle.push_back(bottom[nextIndex]);
 		triangle.push_back(top[nextIndex]);
 		actor.triangles.push_back(triangle);
+		if (i % 2 == 0) {
+			float uCoordA = 0.0;
+			float vCoordA = 0.0;
+			float uCoordB = 0.0;
+			float vCoordB = 1.0;
+			float uCoordC = 1.0;
+			float vCoordC = 1.0;
+			Vector2 coordA(uCoordA, vCoordA);
+			Vector2 coordB(uCoordB, vCoordB);
+			Vector2 coordC(uCoordC, vCoordC);
+			actor.uvCoords.push_back(std::vector<Vector2>({ coordA, coordB, coordC }));
+		}
+		else {
+			float uCoordA = 0.0;
+			float vCoordA = 0.0;
+			float uCoordB = 1.0;
+			float vCoordB = 0.0;
+			float uCoordC = 1.0;
+			float vCoordC = 1.0;
+			Vector2 coordA(uCoordA, vCoordA);
+			Vector2 coordB(uCoordB, vCoordB);
+			Vector2 coordC(uCoordC, vCoordC);
+			actor.uvCoords.push_back(std::vector<Vector2>({ coordA, coordB, coordC }));
+		}
 	}
 
 
@@ -608,8 +775,18 @@ void Window::DetermineTriangles(Actor& actor)
 	std::vector<Vector3> reversedBottom = { bottom[2], bottom[1], bottom[0] };
 	actor.triangles.push_back(reversedBottom);
 	actor.triangles.push_back(reversedTop);
+	Vector2 bottomA(0.0, 0.0), bottomB(1.0, 0.0), bottomC(0.0, 1.0);
+	actor.uvCoords.push_back(std::vector<Vector2>({ bottomA, bottomB, bottomC }));
+
+	Vector2 bottom2A(1.0, 0.0), bottom2B(1.0, 1.0), bottom2C(0.0, 1.0);
+	actor.uvCoords.push_back(std::vector<Vector2>({ bottom2A, bottom2B, bottom2C }));
 	std::vector<Vector3> secondBottom = { bottom[3], bottom[0], bottom[2] };
 	std::vector<Vector3> secondTop;
+	Vector2 topA(0.0, 0.0), topB(1.0, 0.0), topC(0.0, 1.0);
+	actor.uvCoords.push_back(std::vector<Vector2>({ topA, topB, topC }));
+
+	Vector2 top2A(1.0, 0.0), top2B(1.0, 1.0), top2C(0.0, 1.0);
+	actor.uvCoords.push_back(std::vector<Vector2>({ top2A, top2B, top2C }));
 	switch (bottom.size()) {
 	case ShapeSides::Tri:
 		actor.triangles.push_back(reversedBottom);
@@ -620,6 +797,7 @@ void Window::DetermineTriangles(Actor& actor)
 		secondBottom = std::vector<Vector3>({ bottom[3], bottom[0], bottom[2] });
 		actor.triangles.push_back(secondBottom);
 		actor.triangles.push_back(secondTop);
+
 		break;
 	default:
 
@@ -746,4 +924,16 @@ unsigned int Window::LerpBlend(unsigned int frontColor, unsigned int backColor)
 
 	unsigned int color = (backAlpha << 24) | (backRed << 16) | (backGreen << 8) | backBlue;
 	return color;
+}
+unsigned int Window::ConvertColorType(unsigned int color)
+{
+	unsigned int a = (color >> 24) & 0xFF;
+	unsigned int b = (color >> 16) & 0xFF;
+	unsigned int g = (color >> 8) & 0xFF;
+	unsigned int r = (color >> 0) & 0xFF;
+
+	unsigned int converted = (r << 24) | (g << 16) | (b << 8) | a;
+
+
+	return converted;
 }

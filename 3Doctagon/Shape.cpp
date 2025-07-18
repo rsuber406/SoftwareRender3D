@@ -67,3 +67,26 @@ std::vector<std::vector<Vector3>> Shape::GeneratePoints(uint8_t polygonSides, fl
 	return allPoints;
 
 }
+
+std::vector<std::vector<Vector3>> Shape::GenerateSquare()
+{
+	Vector3 firstVertex(-0.25f, 0.25, 0);
+	Vector3 secondVertex(-0.25f, -0.25, 0);
+	Vector3 thirdVertex(0.25f, -0.25, 0);
+	Vector3 fourthVertex(0.25f, 0.25, 0);
+
+	std::vector<Vector3> base;
+	base.push_back(firstVertex);
+	base.push_back(secondVertex);
+	base.push_back(thirdVertex);
+	base.push_back(fourthVertex);
+	std::vector<Vector3> top;
+	for (int i = 0; i < base.size(); i++) {
+		Vector3 topPoints(base[i].GetX(), base[i].GetY(), 0.5f);
+		top.push_back(topPoints);
+	}
+	std::vector<std::vector<Vector3>> vertices;
+	vertices.push_back(base);
+	vertices.push_back(top);
+	return vertices;
+}

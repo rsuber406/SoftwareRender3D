@@ -146,6 +146,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
+    <ClInclude Include="Helpers\greendragon.h" />
     <ClInclude Include="Helpers\MathLib.h" />
     <ClInclude Include="Helpers\Matrix3.h" />
     <ClInclude Include="Helpers\Matrix4.h" />

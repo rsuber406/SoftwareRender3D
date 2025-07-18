@@ -7,15 +7,17 @@
 #include <mutex>
 #include "Helpers/greendragon.h"
 #include <condition_variable>
+#include "Helpers/greendragon.h"
 
 #define MAX_NUMBER_RASTER_THREADS 15
 typedef std::vector<std::vector<Vector3>> StoredShape;
 typedef std::vector<std::vector<Vector3>> Triangle;
-
+typedef std::vector <std::vector<Vector2>> UVCoords;
 struct Actor 
 {
 	StoredShape vertices;
 	Triangle triangles;
+	UVCoords uvCoords;
 	Matrix4 worldMatrix;
 	Vector3 position;
 	bool rotate = false;
@@ -36,6 +38,7 @@ struct ThreadData {
 	std::condition_variable* signalNextFrame = nullptr;
 	std::mutex* windowRasterMutex = nullptr;
 	Triangle triangle;
+	int triangleIdx;
 };
 
 enum ShapeSides {
@@ -69,8 +72,13 @@ private:
 	void BuildWeekTwoLab();
 	void BuildWeekTwoOptional();
 	void RasterScene();
-	void ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldMatrix);
+	unsigned int ConvertColorType(unsigned int color);
+	//This needs replaced - awful spaghetti and nightmares
+	void ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldMatrix, int triangleNum);
+	// This needs replaced - awful spaghetti and nightmares
 	void RasterObject(Actor& actor);
+	// Good raster method
+	void BetterRaster(Actor& actor);
 	void DetermineTriangles(Actor& actor);
 	void RenderShapes(Scene sceneToRender);
 	void DrawLines(Vector3& from, Vector3& to, Matrix4& worldMatrix, uint32_t& color);
