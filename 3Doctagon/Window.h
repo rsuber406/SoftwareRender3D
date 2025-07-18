@@ -73,12 +73,24 @@ private:
 	void BuildWeekTwoOptional();
 	void RasterScene();
 	unsigned int ConvertColorType(unsigned int color);
-	//This needs replaced - awful spaghetti and nightmares
+	/// <summary>
+	/// This also needs deleted - only keeping so you can see the pain of going the wrong path
+	/// </summary>
+	/// <param name="triangle"></param>
+	/// <param name="worldMatrix"></param>
+	/// <param name="triangleNum"></param>
 	void ThreadRasterObject(Triangle& triangle, std::vector<Matrix4>& worldMatrix, int triangleNum);
-	// This needs replaced - awful spaghetti and nightmares
+	/// <summary>
+	/// This also needs deleted - only keeping so you can see the pain of going the wrong path
+	/// </summary>
+	/// <param name="actor"></param>
 	void RasterObject(Actor& actor);
 	// Good raster method
 	void BetterRaster(Actor& actor);
+	/// <summary>
+	/// This could be made better but I dont have the time to rebuild this
+	/// </summary>
+	/// <param name="actor"></param>
 	void DetermineTriangles(Actor& actor);
 	void RenderShapes(Scene sceneToRender);
 	void DrawLines(Vector3& from, Vector3& to, Matrix4& worldMatrix, uint32_t& color);

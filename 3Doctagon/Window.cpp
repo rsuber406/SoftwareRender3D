@@ -186,8 +186,8 @@ void Window::UpdateActors()
 
 			objectsToRender[i].worldMatrix = moveToPosition * rotation * moveToOrigin;
 
-			objectsToRender[i].triangles.clear();
-			DetermineTriangles(objectsToRender[i]);
+			//objectsToRender[i].triangles.clear();
+			
 		}
 
 		//TakeShape(objectsToRender[i]);
@@ -626,18 +626,18 @@ void Window::BetterRaster(Actor& actor)
 {
 
 	for (int i = 0; i < actor.triangles.size(); i++) {
-		Vector3 a = actor.triangles[i][1];
-		Vector3 b = actor.triangles[i][0];
-		Vector3 c = actor.triangles[i][2];
+		Vector3 a = (actor.worldMatrix * actor.triangles[i][1]).ToVector3();
+		Vector3 b = (actor.worldMatrix * actor.triangles[i][0]).ToVector3();
+		Vector3 c = (actor.worldMatrix * actor.triangles[i][2]).ToVector3();
 		Vector2 uvCoordA = actor.uvCoords[i][1];
 		
 		Vector2 uvCoordB = actor.uvCoords[i][0];
 		
 		Vector2 uvCoordC = actor.uvCoords[i][2];
-		
-		Vector2 screenPointA = camera->WorldToScreenPixel(a, actor.worldMatrix);
-		Vector2 screenPointB = camera->WorldToScreenPixel(b, actor.worldMatrix);
-		Vector2 screenPointC = camera->WorldToScreenPixel(c, actor.worldMatrix);
+		Matrix4 ident = Matrix4::Identity();
+		Vector2 screenPointA = camera->WorldToScreenPixel(a, ident);
+		Vector2 screenPointB = camera->WorldToScreenPixel(b, ident);
+		Vector2 screenPointC = camera->WorldToScreenPixel(c, ident);
 		int minX = (int)std::min(screenPointA.GetX(), std::min(screenPointB.GetX(), screenPointC.GetX()));
 		int maxX = (int)std::max(screenPointA.GetX(), std::max(screenPointB.GetX(), screenPointC.GetX()));
 		int minY = (int)std::min(screenPointA.GetY(), std::min(screenPointB.GetY(), screenPointC.GetY()));
