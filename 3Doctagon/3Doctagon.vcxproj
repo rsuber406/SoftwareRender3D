@@ -151,6 +151,8 @@
     <ClInclude Include="Helpers\Matrix3.h" />
     <ClInclude Include="Helpers\Matrix4.h" />
     <ClInclude Include="Helpers\RasterSurface.h" />
+    <ClInclude Include="Helpers\StoneHenge.h" />
+    <ClInclude Include="Helpers\StoneHenge_Texture.h" />
     <ClInclude Include="Helpers\Vector2.h" />
     <ClInclude Include="Helpers\Vector3.h" />
     <ClInclude Include="Helpers\Vector4.h" />

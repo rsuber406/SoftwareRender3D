@@ -8,11 +8,16 @@
 #include "Helpers/greendragon.h"
 #include <condition_variable>
 #include "Helpers/greendragon.h"
-
+#define RENDER_LAB 4// zero is my trial version of all of this
 #define MAX_NUMBER_RASTER_THREADS 15
 typedef std::vector<std::vector<Vector3>> StoredShape;
 typedef std::vector<std::vector<Vector3>> Triangle;
 typedef std::vector <std::vector<Vector2>> UVCoords;
+typedef std::vector<Vector3> Verticies;
+
+/// <summary>
+/// This works well for labs 2 - 3 does not work for lab 4. Need altered approach
+/// </summary>
 struct Actor 
 {
 	StoredShape vertices;
@@ -27,6 +32,18 @@ struct Actor
 };
 typedef std::vector<Vector3> Face;
 typedef std::vector<Actor> Scene;
+
+
+struct SceneObject {
+	Verticies positions;
+	uint32_t color = 0xFFFFFFFF;
+	Vector3 position;
+	Matrix4 worldMatrix;
+	UVCoords uvCoords;
+	Triangle triangles;
+
+};
+typedef std::vector<SceneObject>StoneHengeScene;
 
 struct ThreadData {
 	bool* keepAlive = nullptr;
@@ -71,6 +88,9 @@ private:
 	void RenderOctagon();
 	void BuildWeekTwoLab();
 	void BuildWeekTwoOptional();
+	void BuildWeekFourLab();
+	Verticies BuildStars();
+	SceneObject BuildStoneHengeData();
 	void RasterScene();
 	unsigned int ConvertColorType(unsigned int color);
 	/// <summary>
@@ -111,5 +131,6 @@ private:
 	std::condition_variable signalNextFrame;
 	std::mutex windowRasterMutex;
 	uint16_t threadCount = 0;
+	StoneHengeScene scene;
 };
 
