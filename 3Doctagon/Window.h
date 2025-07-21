@@ -8,7 +8,9 @@
 #include "Helpers/greendragon.h"
 #include <condition_variable>
 #include "Helpers/greendragon.h"
-#define RENDER_LAB 4// zero is my trial version of all of this
+#include <chrono>
+
+#define RENDER_LAB 4 // zero is my trial version of all of this
 #define MAX_NUMBER_RASTER_THREADS 15
 typedef std::vector<std::vector<Vector3>> StoredShape;
 typedef std::vector<std::vector<Vector3>> Triangle;
@@ -33,13 +35,19 @@ struct Actor
 typedef std::vector<Vector3> Face;
 typedef std::vector<Actor> Scene;
 
+struct UVMap {
+	float u;
+	float v;
+	float w;
+};
+typedef std::vector<UVMap> MappedUV;
 
 struct SceneObject {
 	Verticies positions;
 	uint32_t color = 0xFFFFFFFF;
 	Vector3 position;
 	Matrix4 worldMatrix;
-	UVCoords uvCoords;
+	MappedUV uvCoords;
 	Triangle triangles;
 
 };
@@ -78,7 +86,7 @@ public:
 	~Window();
 
 private:
-
+	void HandleInputControls(std::chrono::milliseconds deltaTime);
 	void ClearScreen();
 	void CreateRasterThreads();
 	void ThreadEntryPoint(ThreadData* threadData);
@@ -89,6 +97,9 @@ private:
 	void BuildWeekTwoLab();
 	void BuildWeekTwoOptional();
 	void BuildWeekFourLab();
+	void UpdateStoneHengeScene();
+	void BuildStoneHenge(SceneObject& sceneObj);
+	void PaintStarfield(Verticies verticies, Matrix4& worldMatrix, uint32_t color);
 	Verticies BuildStars();
 	SceneObject BuildStoneHengeData();
 	void RasterScene();
@@ -107,6 +118,7 @@ private:
 	void RasterObject(Actor& actor);
 	// Good raster method
 	void BetterRaster(Actor& actor);
+	void BetterRaster(SceneObject& sceneObj);
 	/// <summary>
 	/// This could be made better but I dont have the time to rebuild this
 	/// </summary>
@@ -132,5 +144,7 @@ private:
 	std::mutex windowRasterMutex;
 	uint16_t threadCount = 0;
 	StoneHengeScene scene;
+	std::chrono::milliseconds deltaTime;
+
 };
 

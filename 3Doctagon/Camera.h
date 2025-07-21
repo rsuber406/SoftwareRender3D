@@ -9,6 +9,8 @@ public:
 		uint32_t width, uint32_t height  );
 	Vector2 WorldToScreenPixel(Vector3& worldPosition, Matrix4& worldMatrix);
 	Vector3 GetPosition() { return position; }
+	void SetPosition(Vector3 position);
+	void RebuildMatrices();
 /// <summary>
 /// If camera controls are added, you must rebuild the view matrix and projection matrix
 /// 

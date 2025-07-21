@@ -37,6 +37,17 @@ Vector2 Camera::WorldToScreenPixel(Vector3& worldPosition, Matrix4& worldMatrix)
 	return screenPos;
 }
 
+void Camera::SetPosition(Vector3 position)
+{
+	this->position = position;
+}
+
+void Camera::RebuildMatrices()
+{
+	viewMatrix = GetViewMatrix();
+	projection = GetPerspectiveMatrix();
+}
+
 Matrix4 Camera::GetViewMatrix()
 {
 	return Matrix4::LookAt(position, target, up);

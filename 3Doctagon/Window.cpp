@@ -1,11 +1,13 @@
 #include "Window.h"
 #include <cstdint>
-#include <chrono>
 #include <iostream>
 #include <algorithm>
 #include <functional>
 #include "Helpers/StoneHenge_Texture.h"
 #include "Helpers/StoneHenge.h"
+#define NOMINMAX
+
+#include <windows.h>
 
 #if RENDER_LAB == 0
 #define CAMERA_X_POS 0.00f
@@ -40,8 +42,8 @@
 #define TEXTURE_PIXELS greendragon_pixels
 #elif RENDER_LAB == 4
 #define CAMERA_X_POS 0.0f
-#define CAMERA_Y_POS -1.0f
-#define CAMERA_Z_POS 0.5f
+#define CAMERA_Y_POS -10.0f
+#define CAMERA_Z_POS 2.5f
 #define WIDTH 500
 #define HEIGHT 600
 #define	TOTAL_PIXEL WIDTH * HEIGHT
@@ -80,23 +82,29 @@ void Window::UpdateLoop()
 {
 	auto timeStamp = std::chrono::high_resolution_clock::now();
 	auto timeCheck = timeStamp;
-
+	auto prevFrame = timeStamp;
 	while (keepAlive)
 	{
 		timeCheck = std::chrono::high_resolution_clock::now();
+		auto currentFrame = timeCheck;
+
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(timeCheck - timeStamp);
+		auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentFrame - prevFrame);
 		if (elapsed > std::chrono::milliseconds(32))
 		{
 			if (!keepAlive) return;
 			if (RENDER_LAB != 4) {
 
 				ClearScreen();
+				
 				UpdateActors();
 				//RasterScene();
 				BetterRaster(objectsToRender[1]);
 			}
 			else {
-
+				HandleInputControls(deltaTime);
+				ClearScreen();
+				UpdateStoneHengeScene();
 			}
 			timeStamp = timeCheck;
 		}
@@ -126,6 +134,60 @@ Window::~Window()
 	if (rasterThreads) delete[] rasterThreads;
 	if (depthBuffer) delete[] depthBuffer;
 	RS_Shutdown();
+}
+
+void Window::HandleInputControls(std::chrono::milliseconds deltaTime)
+{
+	float cameraMovementSpeed = 0.01f;
+	if (GetAsyncKeyState('Q')) // rotate ccw
+	{
+		float moveAmount = cameraMovementSpeed;
+		Vector3 position = camera->GetPosition();
+		camera->SetPosition(position * -1);
+		Matrix4 rotation = Matrix4::RotationZ(moveAmount);
+		Vector4 newPosition = rotation * position;
+		camera->SetPosition(newPosition.ToVector3());
+		camera->RebuildMatrices();
+	}
+	else if (GetAsyncKeyState('E')) // rotate cw
+	{
+		float moveAmount = cameraMovementSpeed;
+		Vector3 position = camera->GetPosition();
+		camera->SetPosition(position * -1);
+		Matrix4 rotation = Matrix4::RotationZ(-moveAmount);
+		Vector4 newPosition = rotation * position;
+		camera->SetPosition(newPosition.ToVector3());
+		camera->RebuildMatrices();
+	}
+	if (GetAsyncKeyState('W')) // pitch up
+	{
+		float moveAmount = cameraMovementSpeed;
+		Vector3 position = camera->GetPosition();
+		camera->SetPosition(position * -1);
+		Matrix4 rotation = Matrix4::RotationX(moveAmount);
+		Vector4 newPosition = rotation * position;
+		camera->SetPosition(newPosition.ToVector3());
+		camera->RebuildMatrices();
+	}
+	else if (GetAsyncKeyState('S')) // pitch down
+	{
+		float moveAmount = cameraMovementSpeed;
+		Vector3 position = camera->GetPosition();
+		camera->SetPosition(position * -1);
+		Matrix4 rotation = Matrix4::RotationX(-moveAmount);
+		Vector4 newPosition = rotation * position;
+		camera->SetPosition(newPosition.ToVector3());
+		camera->RebuildMatrices();
+	}
+	else if (GetAsyncKeyState(VK_UP)) {
+		float moveAmount = cameraMovementSpeed;
+		Vector3 position = camera->GetPosition();
+		camera->SetPosition(position * -1);
+		Matrix4 translation = Matrix4::Translation(Vector3(0, 1, 0));
+		camera->SetPosition((translation * position).ToVector3());
+
+		
+	}
 }
 
 void Window::ClearScreen()
@@ -342,16 +404,44 @@ void Window::BuildWeekFourLab()
 	for (int i = 0; i < starfield.positions.size(); i++) {
 		PointToPixel(starfield.positions[i], starfield.worldMatrix, starfield.color);
 	}
+	SceneObject stoneHenge = BuildStoneHengeData();
+
+	scene.push_back(starfield);
+	scene.push_back(stoneHenge);
+}
+
+void Window::UpdateStoneHengeScene()
+{
+	for (int i = 0; i < scene.size(); i++) {
+		if (scene[i].triangles.size() == 0) {
+			PaintStarfield(scene[i].positions, scene[i].worldMatrix, scene[i].color);
+		}
+		else BuildStoneHenge(scene[i]);
+	}
+}
+
+void Window::BuildStoneHenge(SceneObject& sceneObj)
+{
+
+	BetterRaster(sceneObj);
+}
+
+void Window::PaintStarfield(Verticies verticies, Matrix4& worldMatrix, uint32_t color)
+{
+	for (int i = 0; i < verticies.size(); i++) {
+		PointToPixel(verticies[i], worldMatrix, color);
+	}
 }
 
 Verticies Window::BuildStars()
 {
+	// This sets up the creation of 3000 stars at a radius of 50
 	float angle = (2 * PI) / 60;
 	float sphereAngle = PI / 50;
 	Verticies stars;
 	float sphereRadius = 50;
 	Vector3 position(0, 0, 0);
-	for (int i = 0; i < 60; i++) // 3000 amount of stars
+	for (int i = 0; i < 60; i++) 
 	{
 		for (int j = 0; j < 50; j++) {
 			float theta = i * angle;
@@ -359,9 +449,9 @@ Verticies Window::BuildStars()
 			float x = sin(phi) * cos(theta);
 			float y = sin(theta) * sin(phi);
 			float z = cos(phi);
-			x += (rand() % 100 - 50) / 10;
-			y += (rand() % 100 - 50) / 10;
-			z += (rand() % 100 - 50) / 10;
+			x += (rand() % 5 );
+			y += (rand() % 5);
+			z += (rand() % 5);
 			Vector3 star(x * sphereRadius, y * sphereRadius, z * sphereRadius);
 			//star = star + radius + position;
 			stars.push_back(star);
@@ -378,10 +468,28 @@ SceneObject Window::BuildStoneHengeData()
 	// cannot build at the moment until I figure out how to translate their OBJ data to work with my types. Because saving data as 
 	// floats would have been to easy
 	for (int i = 0; i < 1457; i++) {
-	//	Vector3 pointInfo((float)StoneHenge_data[i][0], StoneHenge_data[i][1], StoneHenge_data[i][2]);
+		Vector3 pointInfo(StoneHenge_data[i].pos[0], StoneHenge_data[i].pos[2], StoneHenge_data[i].pos[1]);
+		pointInfo = pointInfo * 0.1f;
+		UVMap map;
+		map.u = (float)StoneHenge_data[i].uvw[0];
+		map.v = (float)StoneHenge_data[i].uvw[1];
+		map.w = (float)StoneHenge_data[i].uvw[1];
+		stoneHenge.positions.push_back(pointInfo);
+		stoneHenge.uvCoords.push_back(map);
+
 		
 	}
-	return SceneObject();
+
+	// map the triangles
+
+	for (int i = 0; i < 1457; ) {
+		std::vector<Vector3> set = { stoneHenge.positions[StoneHenge_indicies[i]], 
+			stoneHenge.positions[StoneHenge_indicies[i + 1]], 
+			stoneHenge.positions[StoneHenge_indicies[i + 2]] };
+		stoneHenge.triangles.push_back(set);
+		i += 3;
+	}
+	return stoneHenge;
 }
 
 void Window::RasterScene()
@@ -754,6 +862,64 @@ void Window::BetterRaster(Actor& actor)
 					int pixelLocation = y * WIDTH + x;
 					if (pixelLocation > TOTAL_PIXEL) continue;
 					if (zDepth < depthBuffer[pixelLocation]) {
+						depthBuffer[pixelLocation] = zDepth;
+						pixels[pixelLocation] = ConvertColorType(TEXTURE_PIXELS[textureLocation]);
+					}
+
+				}
+			}
+		}
+	}
+}
+
+void Window::BetterRaster(SceneObject& sceneObj)
+{
+	for (int i = 0; i < sceneObj.triangles.size(); i++) {
+		Vector3 a = (sceneObj.triangles[i][1]);
+		Vector3 b = (sceneObj.triangles[i][0]);
+		Vector3 c = (sceneObj.triangles[i][2]);
+		//Vector2 uvCoordA = sceneObj.uvCoords[i].v;
+
+		//Vector2 uvCoordB = actor.uvCoords[i][0];
+
+		//Vector2 uvCoordC = actor.uvCoords[i][2];
+		Matrix4 ident = Matrix4::Identity();
+		Vector2 screenPointA = camera->WorldToScreenPixel(a, sceneObj.worldMatrix);
+		Vector2 screenPointB = camera->WorldToScreenPixel(b, sceneObj.worldMatrix);
+		Vector2 screenPointC = camera->WorldToScreenPixel(c, sceneObj.worldMatrix);
+		int minX = (int)std::min(screenPointA.GetX(), std::min(screenPointB.GetX(), screenPointC.GetX()));
+		int maxX = (int)std::max(screenPointA.GetX(), std::max(screenPointB.GetX(), screenPointC.GetX()));
+		int minY = (int)std::min(screenPointA.GetY(), std::min(screenPointB.GetY(), screenPointC.GetY()));
+		int maxY = (int)std::max(screenPointA.GetY(), std::max(screenPointB.GetY(), screenPointC.GetY()));
+
+		for (int y = minY; y <= maxY; y++) {
+			for (int x = minX; x <= maxX; x++) {
+
+				float edge0 = (screenPointB.GetX() - screenPointA.GetX()) * (y - screenPointA.GetY()) - (screenPointB.GetY() - screenPointA.GetY()) * (x - screenPointA.GetX());
+				float edge1 = (screenPointC.GetX() - screenPointB.GetX()) * (y - screenPointB.GetY()) - (screenPointC.GetY() - screenPointB.GetY()) * (x - screenPointB.GetX());
+				float edge2 = (screenPointA.GetX() - screenPointC.GetX()) * (y - screenPointC.GetY()) - (screenPointA.GetY() - screenPointC.GetY()) * (x - screenPointC.GetX());
+				if ((edge0 >= 0 && edge1 >= 0 && edge2 >= 0) || (edge0 <= 0 && edge1 <= 0 && edge2 <= 0)) {
+
+					float area = edge0 + edge1 + edge2;
+					float u = edge1 / area;
+					float v = edge2 / area;
+					float w = edge0 / area;
+
+
+					float zDepth = u * a.GetY() + v * b.GetY() + w * c.GetY();  // Y is my depth not Z
+
+					float finalU = (u * sceneObj.uvCoords[i].u + v * sceneObj.uvCoords[i].u + w * sceneObj.uvCoords[i].u);  // Keep U the same
+					float finalV = (u * sceneObj.uvCoords[i].v + v * sceneObj.uvCoords[i].v + w * sceneObj.uvCoords[i].v);
+					int uLocation = (int)((finalU)*TEXTURE_WIDTH);
+					int vLocation = (int)((finalV)*TEXTURE_HEIGHT);
+					uLocation = std::max(0, std::min(uLocation, (int)TEXTURE_WIDTH));
+					vLocation = std::max(0, std::min(vLocation, (int)TEXTURE_HEIGHT));
+					int textureLocation = vLocation * TEXTURE_WIDTH + uLocation;
+					int pixelLocation = y * WIDTH + x;
+					if (pixelLocation > TOTAL_PIXEL) continue;
+					if (pixelLocation < 0) continue;
+					if (zDepth < depthBuffer[pixelLocation]) 
+					{
 						depthBuffer[pixelLocation] = zDepth;
 						pixels[pixelLocation] = ConvertColorType(TEXTURE_PIXELS[textureLocation]);
 					}
