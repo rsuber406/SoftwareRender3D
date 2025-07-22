@@ -42,8 +42,8 @@
 #define TEXTURE_PIXELS greendragon_pixels
 #elif RENDER_LAB == 4
 #define CAMERA_X_POS 0.0f
-#define CAMERA_Y_POS -10.0f
-#define CAMERA_Z_POS 2.5f
+#define CAMERA_Y_POS -4.0f
+#define CAMERA_Z_POS 0.5f
 #define WIDTH 500
 #define HEIGHT 600
 #define	TOTAL_PIXEL WIDTH * HEIGHT
@@ -470,23 +470,24 @@ SceneObject Window::BuildStoneHengeData()
 	for (int i = 0; i < 1457; i++) {
 		Vector3 pointInfo(StoneHenge_data[i].pos[0], StoneHenge_data[i].pos[2], StoneHenge_data[i].pos[1]);
 		pointInfo = pointInfo * 0.1f;
-		UVMap map;
-		map.u = (float)StoneHenge_data[i].uvw[0];
-		map.v = (float)StoneHenge_data[i].uvw[1];
-		map.w = (float)StoneHenge_data[i].uvw[1];
 		stoneHenge.positions.push_back(pointInfo);
-		stoneHenge.uvCoords.push_back(map);
+	
 
 		
 	}
 
 	// map the triangles
 
-	for (int i = 0; i < 1457; ) {
+	for (int i = 0; i < 2532; ) {
 		std::vector<Vector3> set = { stoneHenge.positions[StoneHenge_indicies[i]], 
 			stoneHenge.positions[StoneHenge_indicies[i + 1]], 
 			stoneHenge.positions[StoneHenge_indicies[i + 2]] };
 		stoneHenge.triangles.push_back(set);
+		Vector2 uvCoordA(StoneHenge_data[StoneHenge_indicies[i]].uvw[0], StoneHenge_data[StoneHenge_indicies[i]].uvw[1]);
+		Vector2 uvCoordB(StoneHenge_data[StoneHenge_indicies[i+1]].uvw[0], StoneHenge_data[StoneHenge_indicies[i+1]].uvw[1]);
+		Vector2 uvCoordC(StoneHenge_data[StoneHenge_indicies[i+2]].uvw[0], StoneHenge_data[StoneHenge_indicies[i+2]].uvw[1]);
+		std::vector<Vector2> uvSet = { uvCoordA, uvCoordB, uvCoordC };
+		stoneHenge.uvCoords.push_back(uvSet);
 		i += 3;
 	}
 	return stoneHenge;
@@ -878,11 +879,11 @@ void Window::BetterRaster(SceneObject& sceneObj)
 		Vector3 a = (sceneObj.triangles[i][1]);
 		Vector3 b = (sceneObj.triangles[i][0]);
 		Vector3 c = (sceneObj.triangles[i][2]);
-		//Vector2 uvCoordA = sceneObj.uvCoords[i].v;
+		Vector2 uvCoordA = sceneObj.uvCoords[i][1];
 
-		//Vector2 uvCoordB = actor.uvCoords[i][0];
+		Vector2 uvCoordB = sceneObj.uvCoords[i][0];
 
-		//Vector2 uvCoordC = actor.uvCoords[i][2];
+		Vector2 uvCoordC = sceneObj.uvCoords[i][2];
 		Matrix4 ident = Matrix4::Identity();
 		Vector2 screenPointA = camera->WorldToScreenPixel(a, sceneObj.worldMatrix);
 		Vector2 screenPointB = camera->WorldToScreenPixel(b, sceneObj.worldMatrix);
@@ -908,8 +909,8 @@ void Window::BetterRaster(SceneObject& sceneObj)
 
 					float zDepth = u * a.GetY() + v * b.GetY() + w * c.GetY();  // Y is my depth not Z
 
-					float finalU = (u * sceneObj.uvCoords[i].u + v * sceneObj.uvCoords[i].u + w * sceneObj.uvCoords[i].u);  // Keep U the same
-					float finalV = (u * sceneObj.uvCoords[i].v + v * sceneObj.uvCoords[i].v + w * sceneObj.uvCoords[i].v);
+					float finalU = (u * uvCoordA.GetX() + v * uvCoordB.GetX() + w * uvCoordC.GetX());  // Keep U the same
+					float finalV = (u * uvCoordA.GetY() + v * uvCoordB.GetY() + w * uvCoordC.GetY());
 					int uLocation = (int)((finalU)*TEXTURE_WIDTH);
 					int vLocation = (int)((finalV)*TEXTURE_HEIGHT);
 					uLocation = std::max(0, std::min(uLocation, (int)TEXTURE_WIDTH));

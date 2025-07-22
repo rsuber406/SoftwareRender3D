@@ -47,7 +47,7 @@ struct SceneObject {
 	uint32_t color = 0xFFFFFFFF;
 	Vector3 position;
 	Matrix4 worldMatrix;
-	MappedUV uvCoords;
+	UVCoords uvCoords;
 	Triangle triangles;
 
 };
