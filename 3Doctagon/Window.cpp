@@ -32,8 +32,8 @@
 #define	TOTAL_PIXEL WIDTH * HEIGHT
 #elif RENDER_LAB == 3 // week 3 assignment
 #define CAMERA_X_POS 0.0f
-#define CAMERA_Y_POS -1.0f
-#define CAMERA_Z_POS 0.5f
+#define CAMERA_Y_POS 0.5f
+#define CAMERA_Z_POS -1.0f
 #define WIDTH 500
 #define HEIGHT 600
 #define	TOTAL_PIXEL WIDTH * HEIGHT
@@ -43,8 +43,8 @@
 #elif RENDER_LAB == 4
 #define CAMERA_X_POS 0.0f
 #define CAMERA_Y_POS 2.0f
-#define CAMERA_Z_POS -3.5f
-#define WIDTH 500
+#define CAMERA_Z_POS -4.0f
+#define WIDTH 800
 #define HEIGHT 600
 #define	TOTAL_PIXEL WIDTH * HEIGHT
 #define TEXTURE_WIDTH StoneHenge_width
@@ -272,7 +272,7 @@ void Window::UpdateActors()
 			objectsToRender[i].rotationModifier += 1.0f;  // Add rotation speed
 
 			Matrix4 moveToOrigin = Matrix4::Translation(objectsToRender[i].position * -1);
-			Matrix4 rotation = Matrix4::RotationZ(objectsToRender[i].rotationModifier * PI / 180.0f);
+			Matrix4 rotation = Matrix4::RotationY(objectsToRender[i].rotationModifier * PI / 180.0f);
 			Matrix4 moveToPosition = Matrix4::Translation(objectsToRender[i].position);
 
 			objectsToRender[i].worldMatrix = moveToPosition * rotation * moveToOrigin;
@@ -851,7 +851,7 @@ void Window::BetterRaster(Actor& actor)
 					float w = edge0 / area;
 
 
-					float zDepth = u * a.GetY() + v * b.GetY() + w * c.GetY();  // Y is my depth not Z
+					float zDepth = u * a.GetZ() + v * b.GetZ() + w * c.GetZ();  // Y is my depth not Z
 
 					float finalU = (u * uvCoordA.GetX() + v * uvCoordB.GetX() + w * uvCoordC.GetX());  // Keep U the same
 					float finalV = (u * uvCoordA.GetY() + v * uvCoordB.GetY() + w * uvCoordC.GetY());
@@ -862,6 +862,7 @@ void Window::BetterRaster(Actor& actor)
 					int textureLocation = vLocation * TEXTURE_WIDTH + uLocation;
 					int pixelLocation = y * WIDTH + x;
 					if (pixelLocation > TOTAL_PIXEL) continue;
+					if (pixelLocation < 0) continue;
 					if (zDepth < depthBuffer[pixelLocation]) {
 						depthBuffer[pixelLocation] = zDepth;
 						pixels[pixelLocation] = ConvertColorType(TEXTURE_PIXELS[textureLocation]);
@@ -876,18 +877,18 @@ void Window::BetterRaster(Actor& actor)
 void Window::BetterRaster(SceneObject& sceneObj)
 {
 	for (int i = 0; i < sceneObj.triangles.size(); i++) {
-		Vector3 a = (sceneObj.triangles[i][1]);
-		Vector3 b = (sceneObj.triangles[i][0]);
-		Vector3 c = (sceneObj.triangles[i][2]);
+		Vector3 a = (sceneObj.worldMatrix * sceneObj.triangles[i][1]).ToVector3();
+		Vector3 b = (sceneObj.worldMatrix * sceneObj.triangles[i][0]).ToVector3();
+		Vector3 c = (sceneObj.worldMatrix * sceneObj.triangles[i][2]).ToVector3();
 		Vector2 uvCoordA = sceneObj.uvCoords[i][1];
 
 		Vector2 uvCoordB = sceneObj.uvCoords[i][0];
 
 		Vector2 uvCoordC = sceneObj.uvCoords[i][2];
 		Matrix4 ident = Matrix4::Identity();
-		Vector2 screenPointA = camera->WorldToScreenPixel(a, sceneObj.worldMatrix);
-		Vector2 screenPointB = camera->WorldToScreenPixel(b, sceneObj.worldMatrix);
-		Vector2 screenPointC = camera->WorldToScreenPixel(c, sceneObj.worldMatrix);
+		Vector2 screenPointA = camera->WorldToScreenPixel(a, ident);
+		Vector2 screenPointB = camera->WorldToScreenPixel(b, ident);
+		Vector2 screenPointC = camera->WorldToScreenPixel(c, ident);
 		int minX = (int)std::min(screenPointA.GetX(), std::min(screenPointB.GetX(), screenPointC.GetX()));
 		int maxX = (int)std::max(screenPointA.GetX(), std::max(screenPointB.GetX(), screenPointC.GetX()));
 		int minY = (int)std::min(screenPointA.GetY(), std::min(screenPointB.GetY(), screenPointC.GetY()));

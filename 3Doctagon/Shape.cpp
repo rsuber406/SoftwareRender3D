@@ -9,14 +9,14 @@ void Shape::GenerateLines(std::vector<Vector3>& lineVector,  std::vector<Vector3
 
 	
 	for (float y = -radius; y <= radius; y += step) {
-		lineVector.push_back(Vector3(-radius, y, 0)); 
-		lineVector.push_back(Vector3(radius, y, 0));
+		lineVector.push_back(Vector3(-radius, 0, y)); 
+		lineVector.push_back(Vector3(radius, 0, y));
 	}
 
 	
 	for (float x = -radius; x <= radius; x += step) {
-		lineVector.push_back(Vector3(x, -radius, 0));
-		lineVector.push_back(Vector3(x, radius, 0));
+		lineVector.push_back(Vector3(x, 0, -radius));
+		lineVector.push_back(Vector3(x, 0, radius));
 	}
 }
 
@@ -55,7 +55,7 @@ std::vector<std::vector<Vector3>> Shape::GeneratePoints(uint8_t polygonSides, fl
 		return sourcePoints;
 	}
 
-	Vector3 zHeight(0, 0, polygonHeight);
+	Vector3 zHeight(0, polygonHeight,0);
 	std::vector<Vector3> topPoints(polygonSides);
 	for (int i = 0; i < bottomPoints.size(); i++) {
 		topPoints[i] = bottomPoints[i] + zHeight;
@@ -70,10 +70,10 @@ std::vector<std::vector<Vector3>> Shape::GeneratePoints(uint8_t polygonSides, fl
 
 std::vector<std::vector<Vector3>> Shape::GenerateSquare()
 {
-	Vector3 firstVertex(-0.25f, 0.25, 0);
-	Vector3 secondVertex(-0.25f, -0.25, 0);
-	Vector3 thirdVertex(0.25f, -0.25, 0);
-	Vector3 fourthVertex(0.25f, 0.25, 0);
+	Vector3 firstVertex(-0.25f, 0, 0.25f);
+	Vector3 secondVertex(-0.25f, 0, -0.25f);
+	Vector3 thirdVertex(0.25f, 0, -0.25f);
+	Vector3 fourthVertex(0.25f, 0, 0.25f);
 
 	std::vector<Vector3> base;
 	base.push_back(firstVertex);
@@ -82,7 +82,7 @@ std::vector<std::vector<Vector3>> Shape::GenerateSquare()
 	base.push_back(fourthVertex);
 	std::vector<Vector3> top;
 	for (int i = 0; i < base.size(); i++) {
-		Vector3 topPoints(base[i].GetX(), base[i].GetY(), 0.5f);
+		Vector3 topPoints(base[i].GetX(), 0.5f, base[i].GetZ());
 		top.push_back(topPoints);
 	}
 	std::vector<std::vector<Vector3>> vertices;
