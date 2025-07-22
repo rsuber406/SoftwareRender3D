@@ -5,7 +5,7 @@ Camera::Camera(Vector3& position, Vector3& target, Vector3& up, float fov, float
 {
 	this->position = position;
 	this->target = target;
-	this->up = Vector3(0, 0, 1);
+	this->up = up;
 	this->fov = (fov * PI) / 180;
 	this->aspect = aspect;
 	this->nearPlane = nearPlane;

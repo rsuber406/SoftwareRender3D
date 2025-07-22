@@ -42,8 +42,8 @@
 #define TEXTURE_PIXELS greendragon_pixels
 #elif RENDER_LAB == 4
 #define CAMERA_X_POS 0.0f
-#define CAMERA_Y_POS -4.0f
-#define CAMERA_Z_POS 0.5f
+#define CAMERA_Y_POS 2.0f
+#define CAMERA_Z_POS -3.5f
 #define WIDTH 500
 #define HEIGHT 600
 #define	TOTAL_PIXEL WIDTH * HEIGHT
@@ -61,7 +61,7 @@ Window::Window()
 	//CreateRasterThreads();
 	Vector3 cameraPos(CAMERA_X_POS, CAMERA_Y_POS, CAMERA_Z_POS);
 	Vector3 targetPos(0, 0, 0);
-	Vector3 up(0, 0, 1);
+	Vector3 up(0, 1, 0);
 	int width = WIDTH;
 	int height = HEIGHT;
 	float aspect = (float)width / (float)height;
@@ -144,7 +144,7 @@ void Window::HandleInputControls(std::chrono::milliseconds deltaTime)
 		float moveAmount = cameraMovementSpeed;
 		Vector3 position = camera->GetPosition();
 		camera->SetPosition(position * -1);
-		Matrix4 rotation = Matrix4::RotationZ(moveAmount);
+		Matrix4 rotation = Matrix4::RotationY(moveAmount);
 		Vector4 newPosition = rotation * position;
 		camera->SetPosition(newPosition.ToVector3());
 		camera->RebuildMatrices();
@@ -154,7 +154,7 @@ void Window::HandleInputControls(std::chrono::milliseconds deltaTime)
 		float moveAmount = cameraMovementSpeed;
 		Vector3 position = camera->GetPosition();
 		camera->SetPosition(position * -1);
-		Matrix4 rotation = Matrix4::RotationZ(-moveAmount);
+		Matrix4 rotation = Matrix4::RotationY(-moveAmount);
 		Vector4 newPosition = rotation * position;
 		camera->SetPosition(newPosition.ToVector3());
 		camera->RebuildMatrices();
@@ -468,7 +468,7 @@ SceneObject Window::BuildStoneHengeData()
 	// cannot build at the moment until I figure out how to translate their OBJ data to work with my types. Because saving data as 
 	// floats would have been to easy
 	for (int i = 0; i < 1457; i++) {
-		Vector3 pointInfo(StoneHenge_data[i].pos[0], StoneHenge_data[i].pos[2], StoneHenge_data[i].pos[1]);
+		Vector3 pointInfo(StoneHenge_data[i].pos[0], StoneHenge_data[i].pos[1], StoneHenge_data[i].pos[2]);
 		pointInfo = pointInfo * 0.1f;
 		stoneHenge.positions.push_back(pointInfo);
 	
@@ -907,7 +907,7 @@ void Window::BetterRaster(SceneObject& sceneObj)
 					float w = edge0 / area;
 
 
-					float zDepth = u * a.GetY() + v * b.GetY() + w * c.GetY();  // Y is my depth not Z
+					float zDepth = u * a.GetZ() + v * b.GetZ() + w * c.GetZ();  // Y is my depth not Z
 
 					float finalU = (u * uvCoordA.GetX() + v * uvCoordB.GetX() + w * uvCoordC.GetX());  // Keep U the same
 					float finalV = (u * uvCoordA.GetY() + v * uvCoordB.GetY() + w * uvCoordC.GetY());

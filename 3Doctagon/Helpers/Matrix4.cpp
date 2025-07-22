@@ -313,12 +313,12 @@ Matrix4 Matrix4::LookAt(Vector3 eye, Vector3 target, Vector3 up)
 	forward = forward.Normalize();
 	Vector3 right = Vector3::CrossProduct(forward, up);
 	right = right.Normalize();
-	Vector3 newUp = Vector3::CrossProduct(right, forward);
+	Vector3 newUp = up;
 
 	return Matrix4(
 		Vector4(right.GetX(), right.GetY(), right.GetZ(), -Vector3::DotProduct(right, eye)),
 		Vector4(newUp.GetX(), newUp.GetY(), newUp.GetZ(), -Vector3::DotProduct(newUp, eye)),
-		Vector4(forward.GetX(), forward.GetY(), forward.GetZ(), -Vector3::DotProduct(forward, eye)), 
+		Vector4(forward.GetX(), forward.GetY(), forward.GetZ(), -Vector3::DotProduct(forward, eye)),
 		Vector4(0, 0, 0, 1)
 	);
 }
