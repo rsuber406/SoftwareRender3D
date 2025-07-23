@@ -72,7 +72,7 @@ Window::Window()
 	directionLight.color = 0xFFC0C0F0;
 	pointLight.color = 0xFFFFFF00;
 	pointLight.position = Vector3(-1, 0.5, 1);
-
+	pointLight.radius = 1.0f;
 	ClearScreen();
 	BuildScene();
 }
@@ -108,6 +108,7 @@ void Window::UpdateLoop()
 			else {
 				HandleInputControls(deltaTime);
 				ClearScreen();
+				AdjustPointLightRadius();
 				UpdateStoneHengeScene();
 			}
 			timeStamp = timeCheck;
@@ -346,16 +347,47 @@ uint32_t Window::InterpolateLight(uint32_t color1, uint32_t color2, uint32_t col
 	return interpolated;
 }
 
-uint32_t Window::CalculatePointLight(Vector3& vertexPos, Vector3& vertexNorm, Vector3& lightPos)
+float Window::CalculatePointLight(Vector3& vertexPos, Vector3& vertexNorm, Vector3& lightPos)
 {
 	Vector3 vertexToLight = lightPos - vertexPos;
 	float distance = vertexToLight.Magnitude();
 	vertexToLight = vertexToLight.Normalize(); // pure direction with no distance
-	float diffuse = Saturate(0,1,Vector3::DotProduct(vertexToLight, vertexNorm));
-	
-	float attenuation = 1.0f / (1.0 + distance * distance);
+	float diffuse = Saturate(0, 1, Vector3::DotProduct(vertexToLight, vertexNorm));
+	float radius = 0.2f;
+	float attenuation = 1.0f / (1.0 + distance * distance / pointLight.radius);
 	float pointLightValue = diffuse * attenuation;
 	return pointLightValue;
+}
+
+void Window::AdjustPointLightRadius()
+{
+	if (shrinkPointLightRadius) {
+		pointLight.radius -= 0.025f;
+		if (pointLight.radius < 0) {
+			shrinkPointLightRadius = false;
+		}
+		pointLight.radius = Saturate(0, 1, pointLight.radius);
+	}
+	else {
+		pointLight.radius += 0.025f;
+		if (pointLight.radius > 1) shrinkPointLightRadius = true;
+		pointLight.radius = Saturate(0, 1, pointLight.radius);
+	}
+}
+
+uint32_t Window::CombineDirectionAndPointLight(uint32_t color1, uint32_t color2)
+{
+	uint16_t red1 = (color1 >> 16) & 0xFF;
+	uint16_t red2 = (color2 >> 16) & 0xFF;
+	uint16_t green1 = (color1 >> 8) & 0xFF;
+	uint16_t green2 = (color2 >> 8) & 0xFF;
+	uint16_t blue1 = color1 & 0xFF;
+	uint16_t blue2 = color2 & 0xFF;
+	uint8_t finalRed = Saturate(0, 255, red1 + red2);
+	uint8_t finalGreen = Saturate(0, 255, green1 + green2);
+	uint8_t finalBlue = Saturate(0, 255, blue1 + blue2);
+	uint32_t finalColor = (0xFF << 24) | (finalRed << 16) | (finalGreen << 8) | finalBlue;
+	return finalColor;
 }
 
 void Window::UpdateActors()
@@ -1000,6 +1032,10 @@ void Window::BetterRaster(SceneObject& sceneObj)
 		uint32_t lightColorA = sceneObj.triangleLightColor[i][1];
 		uint32_t lightColorB = sceneObj.triangleLightColor[i][0];
 		uint32_t lightColorC = sceneObj.triangleLightColor[i][2];
+		Vector3 normA = sceneObj.triangleNormal[i][1];
+		Vector3 normB = sceneObj.triangleNormal[i][0];
+		Vector3 normC = sceneObj.triangleNormal[i][2];
+
 		int minX = (int)std::min(screenPointA.GetX(), std::min(screenPointB.GetX(), screenPointC.GetX()));
 		int maxX = (int)std::max(screenPointA.GetX(), std::max(screenPointB.GetX(), screenPointC.GetX()));
 		int minY = (int)std::min(screenPointA.GetY(), std::min(screenPointB.GetY(), screenPointC.GetY()));
@@ -1037,7 +1073,13 @@ void Window::BetterRaster(SceneObject& sceneObj)
 						uint32_t interpolatedColor = InterpolateLight(lightColorA, lightColorB, lightColorC, u, v, w);
 						//pixels[pixelLocation] = ConvertColorType(TEXTURE_PIXELS[textureLocation]);
 						uint32_t textureColor = ConvertColorType(TEXTURE_PIXELS[textureLocation]);
-						textureColor = DetermineSceneColor(interpolatedColor, textureColor);
+						float pointLight1 = CalculatePointLight(a, normA, pointLight.position);
+						float pointLight2 = CalculatePointLight(b, normB, pointLight.position);
+						float pointLight3 = CalculatePointLight(c, normC, pointLight.position);
+						float interpolatePointLight = Saturate(0, 1, pointLight1 * u + pointLight2 * v + pointLight3 * w);
+						uint32_t pointLightColor = DetermineLightColor(interpolatePointLight, pointLight.color);
+						uint32_t combinedLightingColor = CombineDirectionAndPointLight(interpolatedColor, pointLightColor);
+						textureColor = DetermineSceneColor(combinedLightingColor, textureColor);
 						pixels[pixelLocation] = textureColor;
 					}
 

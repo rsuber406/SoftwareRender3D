@@ -76,6 +76,7 @@ struct ThreadData {
 struct PointLight {
 	Vector3 position;
 	uint32_t color;
+	float radius;
 };
 struct DirectionalLight {
 	Vector3 direction;
@@ -111,7 +112,9 @@ private:
 	void ThreadEntryPoint(ThreadData* threadData);
 	void RasterThreadLivingPoint(ThreadData* threadData);
 	uint32_t InterpolateLight(uint32_t color1, uint32_t color2, uint32_t color3, float u, float v, float w);
-	uint32_t CalculatePointLight(Vector3& vertexPos, Vector3& vertexNorm, Vector3& lightPos);
+	float CalculatePointLight(Vector3& vertexPos, Vector3& vertexNorm, Vector3& lightPos);
+	void AdjustPointLightRadius();
+	uint32_t CombineDirectionAndPointLight(uint32_t color1, uint32_t color2);
 	void UpdateActors();
 	void BuildScene();
 	void RenderOctagon();
@@ -156,6 +159,7 @@ private:
 	unsigned int LerpBlend(unsigned int frontColor, unsigned int backColor);
 	unsigned int* pixels = nullptr;
 	bool keepAlive = false;
+	bool shrinkPointLightRadius = true;
 	float* depthBuffer = nullptr;
 	uint64_t threadFlags;
 	Camera* camera = nullptr;
