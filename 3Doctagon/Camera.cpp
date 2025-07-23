@@ -37,6 +37,26 @@ Vector2 Camera::WorldToScreenPixel(Vector3& worldPosition, Matrix4& worldMatrix)
 	return screenPos;
 }
 
+Vector2 Camera::WorldToScreenPixel(Vector3& worldPosition, Matrix4& worldMatrix, float& zDepth)
+{
+	Matrix4 combined = projection * viewMatrix * worldMatrix;
+	Vector4 localPos = Vector4(worldPosition.GetX(), worldPosition.GetY(), worldPosition.GetZ(), 1.0f);
+	Vector4 projectedPosition = combined * localPos;
+	if (projectedPosition.GetW() != 0.00f) {
+
+		projectedPosition.SetX(projectedPosition.GetX() / projectedPosition.GetW());
+		projectedPosition.SetY(projectedPosition.GetY() / projectedPosition.GetW());
+		projectedPosition.SetZ(projectedPosition.GetZ() / projectedPosition.GetW());
+	}
+
+	float screenX = (projectedPosition.GetX() + 1.0f) * 0.5f * screenWidth;
+	float screenY = (projectedPosition.GetY() + 1.0f) * 0.5f * screenHeight;
+	zDepth = projectedPosition.GetW() * projectedPosition.GetZ();
+	Vector2 screenPos(screenX, screenY);
+
+	return screenPos;
+}
+
 void Camera::SetPosition(Vector3 position)
 {
 	this->position = position;

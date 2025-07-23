@@ -42,7 +42,7 @@
 #define TEXTURE_PIXELS greendragon_pixels
 #elif RENDER_LAB == 4
 #define CAMERA_X_POS 0.0f
-#define CAMERA_Y_POS 2.0f
+#define CAMERA_Y_POS 1.0f
 #define CAMERA_Z_POS -4.0f
 #define WIDTH 800
 #define HEIGHT 600
@@ -57,7 +57,7 @@
 #define PI 3.14159f
 Window::Window()
 {
-	keepAlive = RS_Initialize("Ryan Suber Programming Assignment 3", WIDTH, HEIGHT);
+	keepAlive = RS_Initialize("Ryan Suber Programming Assignment 4", WIDTH, HEIGHT);
 	//CreateRasterThreads();
 	Vector3 cameraPos(CAMERA_X_POS, CAMERA_Y_POS, CAMERA_Z_POS);
 	Vector3 targetPos(0, 0, 0);
@@ -144,7 +144,7 @@ Window::~Window()
 void Window::HandleInputControls(std::chrono::milliseconds deltaTime)
 {
 	float cameraMovementSpeed = 0.01f;
-	if (GetAsyncKeyState('Q')) // rotate ccw
+	if (GetAsyncKeyState('E')) // rotate ccw
 	{
 		float moveAmount = cameraMovementSpeed;
 		Vector3 position = camera->GetPosition();
@@ -154,7 +154,7 @@ void Window::HandleInputControls(std::chrono::milliseconds deltaTime)
 		camera->SetPosition(newPosition.ToVector3());
 		camera->RebuildMatrices();
 	}
-	else if (GetAsyncKeyState('E')) // rotate cw
+	else if (GetAsyncKeyState('Q')) // rotate cw
 	{
 		float moveAmount = cameraMovementSpeed;
 		Vector3 position = camera->GetPosition();
@@ -363,15 +363,15 @@ void Window::AdjustPointLightRadius()
 {
 	if (shrinkPointLightRadius) {
 		pointLight.radius -= 0.025f;
-		if (pointLight.radius < 0) {
+		if (pointLight.radius <= 0.01) {
 			shrinkPointLightRadius = false;
 		}
-		pointLight.radius = Saturate(0, 1, pointLight.radius);
+		pointLight.radius = Saturate(0.01, 1, pointLight.radius);
 	}
 	else {
 		pointLight.radius += 0.025f;
 		if (pointLight.radius > 1) shrinkPointLightRadius = true;
-		pointLight.radius = Saturate(0, 1, pointLight.radius);
+		pointLight.radius = Saturate(0.01, 1, pointLight.radius);
 	}
 }
 
@@ -1026,9 +1026,12 @@ void Window::BetterRaster(SceneObject& sceneObj)
 
 		Vector2 uvCoordC = sceneObj.uvCoords[i][2];
 		Matrix4 ident = Matrix4::Identity();
-		Vector2 screenPointA = camera->WorldToScreenPixel(a, ident);
-		Vector2 screenPointB = camera->WorldToScreenPixel(b, ident);
-		Vector2 screenPointC = camera->WorldToScreenPixel(c, ident);
+		float depthA = 0.0f;
+		float depthB = 0.0f;
+		float depthC = 0.0f;
+		Vector2 screenPointA = camera->WorldToScreenPixel(a, ident, depthA);
+		Vector2 screenPointB = camera->WorldToScreenPixel(b, ident, depthB);
+		Vector2 screenPointC = camera->WorldToScreenPixel(c, ident, depthC);
 		uint32_t lightColorA = sceneObj.triangleLightColor[i][1];
 		uint32_t lightColorB = sceneObj.triangleLightColor[i][0];
 		uint32_t lightColorC = sceneObj.triangleLightColor[i][2];
@@ -1055,7 +1058,7 @@ void Window::BetterRaster(SceneObject& sceneObj)
 					float w = edge0 / area;
 
 
-					float zDepth = u * a.GetZ() + v * b.GetZ() + w * c.GetZ();  // Z is now depth
+					float zDepth = u * depthA + v * depthB + w * depthC;  // Z is now depth
 
 					float finalU = (u * uvCoordA.GetX() + v * uvCoordB.GetX() + w * uvCoordC.GetX());  // Keep U the same
 					float finalV = (u * uvCoordA.GetY() + v * uvCoordB.GetY() + w * uvCoordC.GetY());
