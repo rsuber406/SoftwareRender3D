@@ -69,6 +69,10 @@ struct ThreadData {
 	Triangle triangle;
 	int triangleIdx;
 };
+struct PointLight {
+	Vector3 position;
+	uint32_t color;
+};
 struct DirectionalLight {
 	Vector3 direction;
 	uint32_t color;
@@ -158,5 +162,6 @@ private:
 	StoneHengeScene scene;
 	std::chrono::milliseconds deltaTime;
 	DirectionalLight directionLight;
+	PointLight pointLight;
 };
 

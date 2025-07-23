@@ -70,6 +70,9 @@ Window::Window()
 	depthBuffer = new float[TOTAL_PIXEL];
 	directionLight.direction = Vector3(-0.577f, -0.577f, 0.577f);
 	directionLight.color = 0xFFC0C0F0;
+	pointLight.color = 0xFFFFFF00;
+	pointLight.position = Vector3(-1, 0.5, 1);
+
 	ClearScreen();
 	BuildScene();
 }
