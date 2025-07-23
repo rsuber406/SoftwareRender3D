@@ -177,5 +177,6 @@ private:
 	std::chrono::milliseconds deltaTime;
 	DirectionalLight directionLight;
 	PointLight pointLight;
+	float cameraPitch = 0.0; // need this to prevent gimbal lock on x axis
 };
 

@@ -164,8 +164,13 @@ void Window::HandleInputControls(std::chrono::milliseconds deltaTime)
 		camera->SetPosition(newPosition.ToVector3());
 		camera->RebuildMatrices();
 	}
-	if (GetAsyncKeyState('W')) // pitch up
+	if (GetAsyncKeyState('S')) // pitch up
 	{
+		cameraPitch += cameraMovementSpeed;
+		if (cameraPitch >= 0.52) {
+			cameraPitch = 0.52;
+			return;
+		}
 		float moveAmount = cameraMovementSpeed;
 		Vector3 position = camera->GetPosition();
 		camera->SetPosition(position * -1);
@@ -174,8 +179,13 @@ void Window::HandleInputControls(std::chrono::milliseconds deltaTime)
 		camera->SetPosition(newPosition.ToVector3());
 		camera->RebuildMatrices();
 	}
-	else if (GetAsyncKeyState('S')) // pitch down
+	else if (GetAsyncKeyState('W')) // pitch down
 	{
+		cameraPitch -= cameraMovementSpeed;
+		if (cameraPitch <= -0.52f) {
+			cameraPitch = -0.52f;
+			return;
+		}
 		float moveAmount = cameraMovementSpeed;
 		Vector3 position = camera->GetPosition();
 		camera->SetPosition(position * -1);
