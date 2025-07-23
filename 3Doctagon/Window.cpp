@@ -229,7 +229,7 @@ void Window::BuildLightColor()
 
 		for (int j = 0; j < scene[i].normals.size(); j++) {
 			float lightRatio = Saturate(0, 1, Vector3::DotProduct(directionLight.direction * -1, scene[i].normals[j]));
-			lightRatio += 0.2f;
+			lightRatio += 0.2f; // hardcoded ambient
 			lightRatio = Saturate(0, 1, lightRatio);
 			scene[i].lightColor.push_back(DetermineLightColor(lightRatio, directionLight.color));
 		}
