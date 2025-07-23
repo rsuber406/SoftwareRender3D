@@ -143,6 +143,10 @@ private:
 	void RasterObject(Actor& actor);
 	// Good raster method
 	void BetterRaster(Actor& actor);
+	/// <summary>
+	/// This function is for week 4. I could not think of a direct way to use my other struct so I made this one.
+	/// </summary>
+	/// <param name="sceneObj"></param>
 	void BetterRaster(SceneObject& sceneObj);
 	/// <summary>
 	/// This could be made better but I dont have the time to rebuild this
