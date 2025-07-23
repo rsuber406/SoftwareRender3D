@@ -18,6 +18,8 @@ typedef std::vector <std::vector<Vector2>> UVCoords;
 typedef std::vector<Vector3> Verticies;
 typedef std::vector<Vector3> SurfaceNormals;
 typedef std::vector<uint32_t> LightColors;
+typedef std::vector<std::vector<Vector3>> TriangleNormals;
+typedef std::vector<std::vector<uint32_t>> TriangleLightColor;
 
 /// <summary>
 /// This works well for labs 2 - 3 does not work for lab 4. Need altered approach
@@ -54,6 +56,8 @@ struct SceneObject {
 	SurfaceNormals normals;
 	LightColors lightColor;
 	LightColors triangleColor;
+	TriangleNormals triangleNormal;
+	TriangleLightColor triangleLightColor;
 };
 typedef std::vector<SceneObject>StoneHengeScene;
 
@@ -106,6 +110,8 @@ private:
 	void CreateRasterThreads();
 	void ThreadEntryPoint(ThreadData* threadData);
 	void RasterThreadLivingPoint(ThreadData* threadData);
+	uint32_t InterpolateLight(uint32_t color1, uint32_t color2, uint32_t color3, float u, float v, float w);
+	uint32_t CalculatePointLight(Vector3& vertexPos, Vector3& vertexNorm, Vector3& lightPos);
 	void UpdateActors();
 	void BuildScene();
 	void RenderOctagon();

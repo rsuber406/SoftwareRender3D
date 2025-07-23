@@ -100,7 +100,7 @@ void Window::UpdateLoop()
 			if (RENDER_LAB != 4) {
 
 				ClearScreen();
-				
+
 				UpdateActors();
 				//RasterScene();
 				BetterRaster(objectsToRender[1]);
@@ -190,7 +190,7 @@ void Window::HandleInputControls(std::chrono::milliseconds deltaTime)
 		Matrix4 translation = Matrix4::Translation(Vector3(0, 1, 0));
 		camera->SetPosition((translation * position).ToVector3());
 
-		
+
 	}
 }
 
@@ -222,11 +222,19 @@ void Window::BuildLightColor()
 			lightRatio = Saturate(0, 1, lightRatio);
 			scene[i].lightColor.push_back(DetermineLightColor(lightRatio, directionLight.color));
 		}
-		for (int j = 0; j < scene[i].triangles.size(); j++) {
-			scene[i].triangleColor.push_back(scene[i].lightColor[j]);
+		if (scene[i].lightColor.size() > 0) {
+
+			for (int j = 0; j < 2532; ) {
+				std::vector<uint32_t> lightColor{ scene[i].lightColor[StoneHenge_indicies[j]],
+					scene[i].lightColor[StoneHenge_indicies[j + 1]]
+					,scene[i].lightColor[StoneHenge_indicies[j + 2]] };
+				scene[i].triangleLightColor.push_back(lightColor);
+				j += 3;
+			}
 		}
+
 	}
-	
+
 }
 
 uint32_t Window::DetermineLightColor(float ratio, uint32_t color)
@@ -317,6 +325,37 @@ void Window::RasterThreadLivingPoint(ThreadData* threadData)
 		//threadData->windowRasterMutex->unlock();
 		threadData->signalNextFrame->notify_all();
 	}
+}
+
+uint32_t Window::InterpolateLight(uint32_t color1, uint32_t color2, uint32_t color3, float u, float v, float w)
+{
+	uint8_t red1 = (color1 >> 16) & 0xFF;
+	uint8_t red2 = (color2 >> 16) & 0xFF;
+	uint8_t red3 = (color3 >> 16) & 0xFF;
+	uint8_t green1 = (color1 >> 8) & 0xFF;
+	uint8_t green2 = (color2 >> 8) & 0xFF;
+	uint8_t green3 = (color3 >> 8) & 0xFF;
+	uint8_t blue1 = color1 & 0xFF;
+	uint8_t blue2 = color2 & 0xFF;
+	uint8_t blue3 = color3 & 0xFF;
+	uint8_t redFinal = red1 * u + red2 * v + red3 * w;
+	uint8_t greenFinal = green1 * u + green2 * v + green3 * w;
+	uint8_t blueFinal = blue1 * u + blue2 * v + blue3 * w;
+	uint32_t interpolated = (0xFF << 24) | (redFinal << 16) | (greenFinal << 8) | blueFinal;
+
+	return interpolated;
+}
+
+uint32_t Window::CalculatePointLight(Vector3& vertexPos, Vector3& vertexNorm, Vector3& lightPos)
+{
+	Vector3 vertexToLight = lightPos - vertexPos;
+	float distance = vertexToLight.Magnitude();
+	vertexToLight = vertexToLight.Normalize(); // pure direction with no distance
+	float diffuse = Saturate(0,1,Vector3::DotProduct(vertexToLight, vertexNorm));
+	
+	float attenuation = 1.0f / (1.0 + distance * distance);
+	float pointLightValue = diffuse * attenuation;
+	return pointLightValue;
 }
 
 void Window::UpdateActors()
@@ -499,7 +538,7 @@ Verticies Window::BuildStars()
 	Verticies stars;
 	float sphereRadius = 50;
 	Vector3 position(0, 0, 0);
-	for (int i = 0; i < 60; i++) 
+	for (int i = 0; i < 60; i++)
 	{
 		for (int j = 0; j < 50; j++) {
 			float theta = i * angle;
@@ -507,7 +546,7 @@ Verticies Window::BuildStars()
 			float x = sin(phi) * cos(theta);
 			float y = sin(theta) * sin(phi);
 			float z = cos(phi);
-			x += (rand() % 5 );
+			x += (rand() % 5);
 			y += (rand() % 5);
 			z += (rand() % 5);
 			Vector3 star(x * sphereRadius, y * sphereRadius, z * sphereRadius);
@@ -522,14 +561,14 @@ Verticies Window::BuildStars()
 SceneObject Window::BuildStoneHengeData()
 {
 	SceneObject stoneHenge;
-	
+
 	// cannot build at the moment until I figure out how to translate their OBJ data to work with my types. Because saving data as 
 	// floats would have been to easy
 	for (int i = 0; i < 1457; i++) {
 		Vector3 pointInfo(StoneHenge_data[i].pos[0], StoneHenge_data[i].pos[1], StoneHenge_data[i].pos[2]);
 		pointInfo = pointInfo * 0.1f;
 		stoneHenge.positions.push_back(pointInfo);
-	
+
 		Vector3 normalInfo(StoneHenge_data[i].nrm[0], StoneHenge_data[i].nrm[1], StoneHenge_data[i].nrm[2]);
 		stoneHenge.normals.push_back(normalInfo);
 	}
@@ -537,16 +576,26 @@ SceneObject Window::BuildStoneHengeData()
 	// map the triangles
 
 	for (int i = 0; i < 2532; ) {
-		std::vector<Vector3> set = { stoneHenge.positions[StoneHenge_indicies[i]], 
-			stoneHenge.positions[StoneHenge_indicies[i + 1]], 
+		std::vector<Vector3> set = { stoneHenge.positions[StoneHenge_indicies[i]],
+			stoneHenge.positions[StoneHenge_indicies[i + 1]],
 			stoneHenge.positions[StoneHenge_indicies[i + 2]] };
 		stoneHenge.triangles.push_back(set);
 		Vector2 uvCoordA(StoneHenge_data[StoneHenge_indicies[i]].uvw[0], StoneHenge_data[StoneHenge_indicies[i]].uvw[1]);
-		Vector2 uvCoordB(StoneHenge_data[StoneHenge_indicies[i+1]].uvw[0], StoneHenge_data[StoneHenge_indicies[i+1]].uvw[1]);
-		Vector2 uvCoordC(StoneHenge_data[StoneHenge_indicies[i+2]].uvw[0], StoneHenge_data[StoneHenge_indicies[i+2]].uvw[1]);
+		Vector2 uvCoordB(StoneHenge_data[StoneHenge_indicies[i + 1]].uvw[0], StoneHenge_data[StoneHenge_indicies[i + 1]].uvw[1]);
+		Vector2 uvCoordC(StoneHenge_data[StoneHenge_indicies[i + 2]].uvw[0], StoneHenge_data[StoneHenge_indicies[i + 2]].uvw[1]);
 		std::vector<Vector2> uvSet = { uvCoordA, uvCoordB, uvCoordC };
 		stoneHenge.uvCoords.push_back(uvSet);
-
+		Vector3 normalA(StoneHenge_data[StoneHenge_indicies[i]].nrm[0],
+			StoneHenge_data[StoneHenge_indicies[i]].nrm[1],
+			StoneHenge_data[StoneHenge_indicies[i]].nrm[2]);
+		Vector3 normalB(StoneHenge_data[StoneHenge_indicies[i + 1]].nrm[0],
+			StoneHenge_data[StoneHenge_indicies[i + 1]].nrm[1],
+			StoneHenge_data[StoneHenge_indicies[i + 1]].nrm[2]);
+		Vector3 normalC(StoneHenge_data[StoneHenge_indicies[i + 2]].nrm[0],
+			StoneHenge_data[StoneHenge_indicies[i + 2]].nrm[1],
+			StoneHenge_data[StoneHenge_indicies[i + 2]].nrm[2]);
+		std::vector<Vector3> normalSet{ normalA, normalB, normalC };
+		stoneHenge.triangleNormal.push_back(normalSet);
 		i += 3;
 	}
 	return stoneHenge;
@@ -948,6 +997,9 @@ void Window::BetterRaster(SceneObject& sceneObj)
 		Vector2 screenPointA = camera->WorldToScreenPixel(a, ident);
 		Vector2 screenPointB = camera->WorldToScreenPixel(b, ident);
 		Vector2 screenPointC = camera->WorldToScreenPixel(c, ident);
+		uint32_t lightColorA = sceneObj.triangleLightColor[i][1];
+		uint32_t lightColorB = sceneObj.triangleLightColor[i][0];
+		uint32_t lightColorC = sceneObj.triangleLightColor[i][2];
 		int minX = (int)std::min(screenPointA.GetX(), std::min(screenPointB.GetX(), screenPointC.GetX()));
 		int maxX = (int)std::max(screenPointA.GetX(), std::max(screenPointB.GetX(), screenPointC.GetX()));
 		int minY = (int)std::min(screenPointA.GetY(), std::min(screenPointB.GetY(), screenPointC.GetY()));
@@ -967,7 +1019,7 @@ void Window::BetterRaster(SceneObject& sceneObj)
 					float w = edge0 / area;
 
 
-					float zDepth = u * a.GetZ() + v * b.GetZ() + w * c.GetZ();  // Y is my depth not Z
+					float zDepth = u * a.GetZ() + v * b.GetZ() + w * c.GetZ();  // Z is now depth
 
 					float finalU = (u * uvCoordA.GetX() + v * uvCoordB.GetX() + w * uvCoordC.GetX());  // Keep U the same
 					float finalV = (u * uvCoordA.GetY() + v * uvCoordB.GetY() + w * uvCoordC.GetY());
@@ -979,12 +1031,13 @@ void Window::BetterRaster(SceneObject& sceneObj)
 					int pixelLocation = y * WIDTH + x;
 					if (pixelLocation > TOTAL_PIXEL) continue;
 					if (pixelLocation < 0) continue;
-					if (zDepth < depthBuffer[pixelLocation]) 
+					if (zDepth < depthBuffer[pixelLocation])
 					{
 						depthBuffer[pixelLocation] = zDepth;
+						uint32_t interpolatedColor = InterpolateLight(lightColorA, lightColorB, lightColorC, u, v, w);
 						//pixels[pixelLocation] = ConvertColorType(TEXTURE_PIXELS[textureLocation]);
 						uint32_t textureColor = ConvertColorType(TEXTURE_PIXELS[textureLocation]);
-						textureColor = DetermineSceneColor(sceneObj.triangleColor[i], textureColor);
+						textureColor = DetermineSceneColor(interpolatedColor, textureColor);
 						pixels[pixelLocation] = textureColor;
 					}
 
