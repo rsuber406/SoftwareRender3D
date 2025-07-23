@@ -103,7 +103,7 @@ public:
 	~Window();
 
 private:
-	void HandleInputControls(std::chrono::milliseconds deltaTime);
+	void HandleInputControls(float deltaTime);
 	void ClearScreen();
 	void BuildLightColor();
 	uint32_t DetermineLightColor(float ratio, uint32_t color);
@@ -113,7 +113,7 @@ private:
 	void RasterThreadLivingPoint(ThreadData* threadData);
 	uint32_t InterpolateLight(uint32_t color1, uint32_t color2, uint32_t color3, float u, float v, float w);
 	float CalculatePointLight(Vector3& vertexPos, Vector3& vertexNorm, Vector3& lightPos);
-	void AdjustPointLightRadius();
+	void AdjustPointLightRadius(float deltaTime);
 	uint32_t CombineDirectionAndPointLight(uint32_t color1, uint32_t color2);
 	void UpdateActors();
 	void BuildScene();

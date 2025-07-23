@@ -93,9 +93,9 @@ void Window::UpdateLoop()
 		auto currentFrame = timeCheck;
 
 		auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(timeCheck - timeStamp);
-		auto deltaTime = std::chrono::duration_cast<std::chrono::milliseconds>(currentFrame - prevFrame);
-		if (elapsed > std::chrono::milliseconds(32))
+		if (elapsed > std::chrono::milliseconds(6))
 		{
+			auto deltaTime = std::chrono::duration<float>(currentFrame - prevFrame);
 			if (!keepAlive) return;
 			if (RENDER_LAB != 4) {
 
@@ -106,14 +106,14 @@ void Window::UpdateLoop()
 				BetterRaster(objectsToRender[1]);
 			}
 			else {
-				HandleInputControls(deltaTime);
+				HandleInputControls(deltaTime.count());
 				ClearScreen();
-				AdjustPointLightRadius();
+				AdjustPointLightRadius(deltaTime.count());
 				UpdateStoneHengeScene();
 			}
 			timeStamp = timeCheck;
+			prevFrame = currentFrame;
 		}
-
 		RS_Update(pixels, TOTAL_PIXEL);
 	}
 	std::cout << "Update loop is exiting\n";
@@ -141,10 +141,10 @@ Window::~Window()
 	RS_Shutdown();
 }
 
-void Window::HandleInputControls(std::chrono::milliseconds deltaTime)
+void Window::HandleInputControls(float deltaTime)
 {
-	float cameraMovementSpeed = 0.01f;
-	if (GetAsyncKeyState('E')) // rotate ccw
+	float cameraMovementSpeed = 0.3f * deltaTime;
+	if (GetAsyncKeyState('D')) // rotate ccw
 	{
 		float moveAmount = cameraMovementSpeed;
 		Vector3 position = camera->GetPosition();
@@ -154,7 +154,7 @@ void Window::HandleInputControls(std::chrono::milliseconds deltaTime)
 		camera->SetPosition(newPosition.ToVector3());
 		camera->RebuildMatrices();
 	}
-	else if (GetAsyncKeyState('Q')) // rotate cw
+	else if (GetAsyncKeyState('A')) // rotate cw
 	{
 		float moveAmount = cameraMovementSpeed;
 		Vector3 position = camera->GetPosition();
@@ -369,17 +369,17 @@ float Window::CalculatePointLight(Vector3& vertexPos, Vector3& vertexNorm, Vecto
 	return pointLightValue;
 }
 
-void Window::AdjustPointLightRadius()
+void Window::AdjustPointLightRadius(float deltaTime)
 {
 	if (shrinkPointLightRadius) {
-		pointLight.radius -= 0.025f;
+		pointLight.radius -= 0.5f * deltaTime;
 		if (pointLight.radius <= 0.01) {
 			shrinkPointLightRadius = false;
 		}
 		pointLight.radius = Saturate(0.01, 1, pointLight.radius);
 	}
 	else {
-		pointLight.radius += 0.025f;
+		pointLight.radius += 0.5f * deltaTime;
 		if (pointLight.radius > 1) shrinkPointLightRadius = true;
 		pointLight.radius = Saturate(0.01, 1, pointLight.radius);
 	}
