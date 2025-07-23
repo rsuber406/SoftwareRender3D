@@ -16,6 +16,8 @@ typedef std::vector<std::vector<Vector3>> StoredShape;
 typedef std::vector<std::vector<Vector3>> Triangle;
 typedef std::vector <std::vector<Vector2>> UVCoords;
 typedef std::vector<Vector3> Verticies;
+typedef std::vector<Vector3> SurfaceNormals;
+typedef std::vector<uint32_t> LightColors;
 
 /// <summary>
 /// This works well for labs 2 - 3 does not work for lab 4. Need altered approach
@@ -49,7 +51,9 @@ struct SceneObject {
 	Matrix4 worldMatrix;
 	UVCoords uvCoords;
 	Triangle triangles;
-
+	SurfaceNormals normals;
+	LightColors lightColor;
+	LightColors triangleColor;
 };
 typedef std::vector<SceneObject>StoneHengeScene;
 
@@ -64,6 +68,10 @@ struct ThreadData {
 	std::mutex* windowRasterMutex = nullptr;
 	Triangle triangle;
 	int triangleIdx;
+};
+struct DirectionalLight {
+	Vector3 direction;
+	uint32_t color;
 };
 
 enum ShapeSides {
@@ -88,6 +96,9 @@ public:
 private:
 	void HandleInputControls(std::chrono::milliseconds deltaTime);
 	void ClearScreen();
+	void BuildLightColor();
+	uint32_t DetermineLightColor(float ratio, uint32_t color);
+	uint32_t DetermineSceneColor(uint32_t lightColor, uint32_t textureColor);
 	void CreateRasterThreads();
 	void ThreadEntryPoint(ThreadData* threadData);
 	void RasterThreadLivingPoint(ThreadData* threadData);
@@ -104,6 +115,7 @@ private:
 	SceneObject BuildStoneHengeData();
 	void RasterScene();
 	unsigned int ConvertColorType(unsigned int color);
+	float Saturate(float min, float max, float input);
 	/// <summary>
 	/// This also needs deleted - only keeping so you can see the pain of going the wrong path
 	/// </summary>
@@ -145,6 +157,6 @@ private:
 	uint16_t threadCount = 0;
 	StoneHengeScene scene;
 	std::chrono::milliseconds deltaTime;
-
+	DirectionalLight directionLight;
 };
 

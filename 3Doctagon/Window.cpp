@@ -68,7 +68,8 @@ Window::Window()
 	camera = new Camera(cameraPos, targetPos, up, FOV, aspect, NEAR_PLANE, FAR_PLANE, WIDTH, HEIGHT);
 	pixels = new unsigned int[TOTAL_PIXEL];
 	depthBuffer = new float[TOTAL_PIXEL];
-
+	directionLight.direction = Vector3(-0.577f, -0.577f, 0.577f);
+	directionLight.color = 0xFFC0C0F0;
 	ClearScreen();
 	BuildScene();
 }
@@ -206,6 +207,59 @@ void Window::ClearScreen()
 	for (uint32_t i = 0; i < TOTAL_PIXEL; i++) {
 		depthBuffer[i] = 1000.0f;
 	}
+}
+
+void Window::BuildLightColor()
+{
+	for (int i = 0; i < scene.size(); i++) {
+
+		for (int j = 0; j < scene[i].normals.size(); j++) {
+			float lightRatio = Saturate(0, 1, Vector3::DotProduct(directionLight.direction * -1, scene[i].normals[j]));
+			lightRatio += 0.2f;
+			lightRatio = Saturate(0, 1, lightRatio);
+			scene[i].lightColor.push_back(DetermineLightColor(lightRatio, directionLight.color));
+		}
+		for (int j = 0; j < scene[i].triangles.size(); j++) {
+			scene[i].triangleColor.push_back(scene[i].lightColor[j]);
+		}
+	}
+	
+}
+
+uint32_t Window::DetermineLightColor(float ratio, uint32_t color)
+{
+	uint8_t alpha = (color >> 24) & 0xFF;
+	uint8_t red = (color >> 16) & 0xFF;
+	uint8_t green = (color >> 8) & 0xFF;
+	uint8_t blue = color & 0xFF;
+	red *= ratio;
+	green *= ratio;
+	blue *= ratio;
+	alpha = 0xFF;
+	uint32_t transformedColor = (alpha << 24) | (red << 16) | (green << 8) | blue;
+	return transformedColor;
+}
+
+uint32_t Window::DetermineSceneColor(uint32_t lightColor, uint32_t textureColor)
+{
+	uint8_t alpha = (lightColor >> 24) & 0xFF;
+	uint8_t red = (lightColor >> 16) & 0xFF;
+	uint8_t green = (lightColor >> 8) & 0xFF;
+	uint8_t blue = lightColor & 0xFF;
+	float ratioRed = red / 255.0f;
+	float ratioGreen = green / 255.0f;
+	float ratioBlue = blue / 255.0f;
+	uint8_t textAlpha = (textureColor >> 24) & 0xFF;
+	uint8_t textRed = (textureColor >> 16) & 0xFF;
+	uint8_t textGreen = (textureColor >> 8) & 0xFF;
+	uint8_t textBlue = textureColor & 0xFF;
+	textRed *= ratioRed;
+	textGreen *= ratioGreen;
+	textBlue *= ratioBlue;
+	textAlpha = 0xFF;
+	uint32_t finalColor = (textAlpha << 24) | (textRed << 16) | (textGreen << 8) | textBlue;
+
+	return finalColor;
 }
 
 void Window::CreateRasterThreads()
@@ -408,6 +462,7 @@ void Window::BuildWeekFourLab()
 
 	scene.push_back(starfield);
 	scene.push_back(stoneHenge);
+	BuildLightColor();
 }
 
 void Window::UpdateStoneHengeScene()
@@ -472,8 +527,8 @@ SceneObject Window::BuildStoneHengeData()
 		pointInfo = pointInfo * 0.1f;
 		stoneHenge.positions.push_back(pointInfo);
 	
-
-		
+		Vector3 normalInfo(StoneHenge_data[i].nrm[0], StoneHenge_data[i].nrm[1], StoneHenge_data[i].nrm[2]);
+		stoneHenge.normals.push_back(normalInfo);
 	}
 
 	// map the triangles
@@ -488,6 +543,7 @@ SceneObject Window::BuildStoneHengeData()
 		Vector2 uvCoordC(StoneHenge_data[StoneHenge_indicies[i+2]].uvw[0], StoneHenge_data[StoneHenge_indicies[i+2]].uvw[1]);
 		std::vector<Vector2> uvSet = { uvCoordA, uvCoordB, uvCoordC };
 		stoneHenge.uvCoords.push_back(uvSet);
+
 		i += 3;
 	}
 	return stoneHenge;
@@ -923,7 +979,10 @@ void Window::BetterRaster(SceneObject& sceneObj)
 					if (zDepth < depthBuffer[pixelLocation]) 
 					{
 						depthBuffer[pixelLocation] = zDepth;
-						pixels[pixelLocation] = ConvertColorType(TEXTURE_PIXELS[textureLocation]);
+						//pixels[pixelLocation] = ConvertColorType(TEXTURE_PIXELS[textureLocation]);
+						uint32_t textureColor = ConvertColorType(TEXTURE_PIXELS[textureLocation]);
+						textureColor = DetermineSceneColor(sceneObj.triangleColor[i], textureColor);
+						pixels[pixelLocation] = textureColor;
 					}
 
 				}
@@ -1191,4 +1250,11 @@ unsigned int Window::ConvertColorType(unsigned int color)
 
 
 	return converted;
+}
+
+float Window::Saturate(float min, float max, float input)
+{
+	if (input < min) input = min;
+	if (input > max) input = max;
+	return input;
 }
