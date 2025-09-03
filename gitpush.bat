@@ -81,10 +81,10 @@ exit /b
 echo.
 echo Alert single branch workflow
 echo Potential major issues if working in team
-set /p confirm = "Press n to stop execution of git commands: "
+set /p confirm="Press n to stop execution of git commands: "
 echo.
 
-if  "%confirm%" == "n" (exit /b) else (
+if  "%confirm%"=="n" (exit /b) else (
 
 git status
 
