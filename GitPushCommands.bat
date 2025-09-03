@@ -2,7 +2,8 @@
 
 
 
-set /p branchName="Working branch name, ie if you are working in main, then type main."
+set /p branchName="Working branch name, ie if you are working in main, then type main: "
+
 
 echo %branchName%
 
@@ -10,7 +11,7 @@ git checkout %branchName%
 
 git add -A
 
-set /p commitMessage="What did you work on for this commit?"
+set /p commitMessage="What did you work on for this commit?: "
 
 git commit --all -m "%commitMessage%"
 
