@@ -14,7 +14,7 @@ exit /b
 
 :PrWorkflow
 
-if "%mainDevelopment%" == "%branchName%" (goto:singleBranchWorkflow)
+if "%mainDevelopment%" == "%branchName%" (call:singleBranchWorkflow)
 git status
 
 git add -A
@@ -40,7 +40,7 @@ pause
 exit /b
 
 :mainPushWorkflow
-if "%mainDevelopment%" == "%branchName%" (goto:singleBranchWorkflow)
+if "%mainDevelopment%" == "%branchName%" (call:singleBranchWorkflow)
 echo target push workflow selected
 git status
 
