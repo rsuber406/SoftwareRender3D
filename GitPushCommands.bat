@@ -12,7 +12,7 @@ git add -A
 
 set /p commitMessage="What did you work on for this commit?"
 
-git commit --all -m %commitMessage%
+git commit --all -m "%commitMessage%"
 
 git push
 
