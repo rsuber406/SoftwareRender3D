@@ -70,7 +70,7 @@ git status
 
 git add -A
 
-git commit --all -m "%commitMessage%"
+git commit -m "%commitMessage%"
 
 git push
 
@@ -78,6 +78,7 @@ git checkout %mainDevelopment%
 
 git pull
 
+echo %branchName%
 git merge %branchName%
 
 git push
