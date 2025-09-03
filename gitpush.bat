@@ -1,23 +1,40 @@
 @echo off
-
+:: Syntax: color [background][text]
+color 0F
 
 set /p mainDevelopment="What is the name of the main development branch, typically master, main, or development: "
 
 set /p branchName="Working branch name, ie if you are working in main, then type main: "
-set /p commitMessage="What did you work on for this commit?: "
 set /p workflowSelection="Type y for PR workflow, else push on main development is assumed: "
 
+:commitEntry
+cls
+set /p commitMessage="What did you work on for this commit?: "
+
+if "%commitMessage%"=="" (
+
+color 04
+
+echo Fatal, commit message requires input
+
+goto commitEntry
+)
+color 0F
 if /i "%mainDevelopment%"=="%branchName%" (call:singleBranchWorkflow)
 
 if /i "%workflowSelection%"=="y" ( call:PrWorkflow) else (call:mainPushWorkflow)
 
 
 
-exit /b
+exit
 
 :PrWorkflow
 
-
+color 0F
+echo ==========================================
+color 02
+echo Pr workflow selected
+echo ==========================================
 git status
 
 git add -A
@@ -40,16 +57,20 @@ echo Pushed to the git associated with project. Please handle the necessary pull
 
 pause
 
-exit /b
+exit 
 
 :mainPushWorkflow
-
+cls
+color 0F
+echo ==========================================
+color 02
 echo target push workflow selected
+echo ==========================================
 git status
 
 git add -A
 
-git commit --all -m "%commitMessage%"
+git commit -m "%commitMessage%"
 
 git push
 
@@ -57,6 +78,7 @@ git checkout %mainDevelopment%
 
 git pull
 
+echo %branchName%
 git merge %branchName%
 
 git push
@@ -79,12 +101,18 @@ exit
 
 :singleBranchWorkflow
 echo.
+cls
+color 04
 echo Alert single branch workflow
 echo Potential major issues if working in team
 set /p confirm="Press n to stop execution of git commands: "
 echo.
 
 if  "%confirm%"=="n" (exit) else (
+
+color 06
+
+echo Override safety feature, sending upstream... standby...
 
 git status
 
