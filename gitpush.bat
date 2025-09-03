@@ -8,13 +8,14 @@ set /p commitMessage="What did you work on for this commit?: "
 set /p workflowSelection="Type y for PR workflow, else push on main development is assumed: "
 
 if /i "%workflowSelection%"=="y" ( call:PrWorkflow) 
-if "%workflowSelection%" == "s" (call:singleBranchWorkflow) else ( call:mainPushWorkflow)
+if "%workflowSelection%" == "s" (call:singleBranchWorkflow)
+call:mainPushWorkflow
 
 exit /b
 
 :PrWorkflow
 
-if "%mainDevelopment%" == "%branchName%" (call:singleBranchWorkflow)
+if /i "%mainDevelopment%" == "%branchName%" (call:singleBranchWorkflow)
 git status
 
 git add -A
@@ -40,7 +41,7 @@ pause
 exit /b
 
 :mainPushWorkflow
-if "%mainDevelopment%" == "%branchName%" (call:singleBranchWorkflow)
+if /i "%mainDevelopment%" == "%branchName%" (call:singleBranchWorkflow)
 echo target push workflow selected
 git status
 
@@ -78,7 +79,7 @@ exit /b
 echo.
 echo Alert single branch workflow
 echo Potential major issues if working in team
-set /p confrim = "Press n to stop execution of git commands: "
+set /p confirm = "Press n to stop execution of git commands: "
 echo.
 
 if  "%confirm%" == "n" (exit /b) else (
