@@ -10,7 +10,7 @@
 #include "Helpers/greendragon.h"
 #include <chrono>
 
-#define RENDER_LAB 2 // zero is my trial version of all of this
+#define RENDER_LAB 4 // zero is my trial version of all of this
 #define MAX_NUMBER_RASTER_THREADS 15
 typedef std::vector<std::vector<Vector3>> StoredShape;
 typedef std::vector<std::vector<Vector3>> Triangle;

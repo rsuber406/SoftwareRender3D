@@ -7,15 +7,17 @@ set /p branchName="Working branch name, ie if you are working in main, then type
 set /p commitMessage="What did you work on for this commit?: "
 set /p workflowSelection="Type y for PR workflow, else push on main development is assumed: "
 
-if /i "%workflowSelection%"=="y" ( call:PrWorkflow) 
-if "%workflowSelection%" == "s" (call:singleBranchWorkflow)
-call:mainPushWorkflow
+if /i "%mainDevelopment%" == "%branchName%" (call:singleBranchWorkflow)
+
+if /i "%workflowSelection%"=="y" ( call:PrWorkflow) else (call:mainPushWorkflow)
+
+
 
 exit /b
 
 :PrWorkflow
 
-if /i "%mainDevelopment%" == "%branchName%" (call:singleBranchWorkflow)
+
 git status
 
 git add -A
@@ -41,7 +43,7 @@ pause
 exit /b
 
 :mainPushWorkflow
-if /i "%mainDevelopment%" == "%branchName%" (call:singleBranchWorkflow)
+
 echo target push workflow selected
 git status
 
