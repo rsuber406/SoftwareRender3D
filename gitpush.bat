@@ -75,7 +75,7 @@ echo pushed working to working remote to synchronize
 
 pause
 
-exit /b
+exit 
 
 :singleBranchWorkflow
 echo.
@@ -84,7 +84,7 @@ echo Potential major issues if working in team
 set /p confirm="Press n to stop execution of git commands: "
 echo.
 
-if  "%confirm%"=="n" (exit /b) else (
+if  "%confirm%"=="n" (exit) else (
 
 git status
 
@@ -98,7 +98,7 @@ echo Operation complete
 
 pause
 
-exit /b )
+exit  )
 
 
 
